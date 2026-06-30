@@ -41,6 +41,7 @@ jobs:
       AOC_SKIP_COMMIT: ${{ github.event.inputs.skip_commit == true && 'true' || '' }}
       AOC_SESSION: ${{ secrets.AOC_SESSION }}
       CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout

@@ -33,18 +33,21 @@ def run_agent(
         return 1
 
     prompt = prompt_path.read_text(encoding="utf-8")
-    print(f"==> Cursor agent (model={model_name}, year={year}, day={day})")
-
-    result = subprocess.run(
-        ["agent", "-p", prompt, "--force", "--model", model_name, "--output-format", "text"],
-        capture_output=True,
-        text=True,
-    )
-    if result.stdout:
-        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
-    if result.stderr:
-        print(result.stderr, file=sys.stderr, end="" if result.stderr.endswith("\n") else "\n")
+    print(f"==> Cursor agent (model={model_name}, year={year}, day={day})", flush=True)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(result.stdout, encoding="utf-8")
-    return result.returncode
+    with output_path.open("w", encoding="utf-8") as output_handle:
+        process = subprocess.Popen(
+            ["agent", "-p", prompt, "--force", "--model", model_name, "--output-format", "text"],
+            stdout=subprocess.PIPE,
+            stderr=None,
+            text=True,
+            bufsize=1,
+        )
+        assert process.stdout is not None
+        for line in process.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            output_handle.write(line)
+
+    return process.wait()

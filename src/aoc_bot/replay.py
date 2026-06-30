@@ -49,7 +49,7 @@ def replay_year(
     should_skip = skip_commit if skip_commit is not None else skip_commit_enabled()
     dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
 
-    print(f"==> Replaying AoC {year} days {start_day}–{end_day} (dry_run={dry_run})")
+    print(f"==> Replaying AoC {year} days {start_day}–{end_day} (dry_run={dry_run})", flush=True)
     os.environ["AOC_YEAR"] = str(year)
 
     for day in range(start_day, end_day + 1):
