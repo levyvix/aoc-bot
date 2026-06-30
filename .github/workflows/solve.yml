@@ -2,7 +2,7 @@ name: AoC Daily Solve
 
 on:
   schedule:
-    - cron: "0 5 1-12 12 *"
+    - cron: "0 5 1-25 12 *"
   workflow_dispatch:
     inputs:
       day:
@@ -61,6 +61,7 @@ jobs:
       - name: Prepare day and render agent prompt
         run: |
           uv run python scripts/aoc_tool.py prepare
+          echo "AOC_DAY=$(jq -r .day .aoc/meta.json)" >> "$GITHUB_ENV"
           uv run python scripts/aoc_tool.py assert-day
           uv run python scripts/render_prompt.py
 
