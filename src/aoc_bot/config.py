@@ -65,6 +65,13 @@ def current_aoc_day(year: int | None = None) -> int | None:
     return now.day
 
 
+def is_finale_day(year: int, day: int) -> bool:
+    """True on the last puzzle day of an event (finale star, no real Part 2 puzzle)."""
+    if year >= 2025:
+        return day == 12
+    return day == 25
+
+
 def is_historical_replay(year: int, day: int) -> bool:
     """True when the puzzle day is already in the past (skip midnight unlock polling)."""
     now = datetime.now(EST)

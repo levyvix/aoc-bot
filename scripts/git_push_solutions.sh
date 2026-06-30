@@ -9,7 +9,7 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-git pull --rebase origin "$BRANCH"
+git pull --rebase --autostash origin "$BRANCH"
 
 git add "solutions/${YEAR}/${DAY}/"
 if git diff --staged --quiet; then
@@ -18,5 +18,5 @@ if git diff --staged --quiet; then
 fi
 
 git commit -m "aoc: ${YEAR} day ${DAY} solutions"
-git pull --rebase origin "$BRANCH"
+git pull --rebase --autostash origin "$BRANCH"
 git push origin "HEAD:${BRANCH}"

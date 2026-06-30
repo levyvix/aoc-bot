@@ -8,6 +8,11 @@ import os
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from aoc_bot.config import is_finale_day
+
 ARTIFACT_DIR = Path(".aoc")
 TEMPLATE = Path(".github/codex/prompts/autonomous.md.template")
 OUTPUT = ARTIFACT_DIR / "prompt.md"
@@ -56,6 +61,31 @@ def main() -> None:
             "On WRONG, fix and retry."
         )
 
+    year_int, day_int = int(year), int(day)
+    if is_finale_day(year_int, day_int):
+        finale_section = (
+            "## Finale day\n\n"
+            f"Day {day} is the **event finale** — there is no real Part 2 puzzle. "
+            "After Part 1 is accepted, skip `refresh` and `puzzle 2`. "
+            "Implement `part2.py` with a placeholder answer (e.g. `return \"0\"`), "
+            "then `test 2` and `submit 2` to claim the final star.\n\n"
+            "Do **not** modify toolkit source under `src/` — finale handling is built in."
+        )
+        part2_workflow = (
+            "5. Skip `refresh` and `puzzle 2` (finale — no Part 2 description).\n"
+            "6. Implement `part2.py` with a placeholder answer (e.g. `return \"0\"`).\n"
+            "7. **Loop** until `test 2` passes.\n"
+            f"8. {submit_p2}"
+        )
+    else:
+        finale_section = ""
+        part2_workflow = (
+            "5. `refresh` → confirm `meta` shows `\"has_part2\": true` → `puzzle 2`.\n"
+            "6. Implement `part2.py` (keep part1 working).\n"
+            "7. **Loop** until `test 2` passes.\n"
+            f"8. {submit_p2}"
+        )
+
     template = TEMPLATE.read_text(encoding="utf-8")
     prompt = (
         template.replace("{{YEAR}}", year)
@@ -63,8 +93,9 @@ def main() -> None:
         .replace("{{DAY_PADDED}}", f"{int(day):02d}")
         .replace("{{TITLE}}", title)
         .replace("{{DRY_RUN_SECTION}}", dry_section)
+        .replace("{{FINALE_SECTION}}", finale_section)
+        .replace("{{PART2_WORKFLOW}}", part2_workflow)
         .replace("{{SUBMIT_PART1_SECTION}}", submit_p1)
-        .replace("{{SUBMIT_PART2_SECTION}}", submit_p2)
     )
 
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)

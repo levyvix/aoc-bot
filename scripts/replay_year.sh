@@ -21,7 +21,7 @@ for day in $(seq "$START" "$END"); do
 
   if [[ "$SKIP_COMMIT" != "true" ]]; then
     BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-    git pull --rebase origin "$BRANCH"
+    git pull --rebase --autostash origin "$BRANCH"
   fi
 
   need_agent=true

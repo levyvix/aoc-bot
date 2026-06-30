@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from aoc_bot.client import AoCClient, SubmitResult
-from aoc_bot.config import SUBMIT_COOLDOWN_SECONDS, Settings, resolve_day, is_historical_replay
+from aoc_bot.config import SUBMIT_COOLDOWN_SECONDS, Settings, resolve_day, is_historical_replay, is_finale_day
 from aoc_bot.solution_paths import ensure_solution_dir, part_file, solution_dir
 from aoc_bot.solver.base import strip_html
 from aoc_bot.solver.local import LocalSolver
@@ -84,6 +84,7 @@ def _write_artifacts(
         "year": settings.year,
         "title": title,
         "has_part2": part2_html is not None,
+        "finale": is_finale_day(settings.year, day),
         "input_bytes": len(puzzle_input),
         "solution_dir": str(solution_dir(settings.year, day)),
         "part1_file": str(part_file(settings.year, day, 1)),
@@ -106,6 +107,10 @@ def cmd_refresh() -> int:
 
     _write_artifacts(settings, day, puzzle_input, page.part1_html, page.part2_html, page.title)
     meta = json.loads((ARTIFACT_DIR / "meta.json").read_text())
+    if meta.get("finale"):
+        print("Finale day — no Part 2 puzzle text; submit Part 2 after Part 1 to claim the last star.")
+        print(json.dumps(meta, indent=2))
+        return 0
     if not meta["has_part2"]:
         print("WARNING: Part 2 text not available yet — submit Part 1 first, then refresh again.")
         return 1
@@ -122,6 +127,13 @@ def cmd_puzzle(part: int) -> int:
         return 1
     path = ARTIFACT_DIR / f"puzzle-part{part}.md"
     if not path.exists():
+        if part == 2 and _load_meta().get("finale"):
+            print(
+                "Finale day — there is no Part 2 puzzle. "
+                "Implement part2.py with a placeholder answer (e.g. return \"0\"), "
+                "then test 2 and submit 2 to claim the final star."
+            )
+            return 0
         print(f"ERROR: {path} not found.", file=sys.stderr)
         if part == 2:
             print("Part 2 unlocks after Part 1 is accepted. Run: submit 1 → refresh", file=sys.stderr)

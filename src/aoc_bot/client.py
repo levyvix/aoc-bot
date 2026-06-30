@@ -8,7 +8,13 @@ from enum import Enum
 import httpx
 from bs4 import BeautifulSoup
 
-from aoc_bot.config import AOC_BASE_URL, USER_AGENT, POLL_INTERVAL_SECONDS, MAX_UNLOCK_WAIT_SECONDS
+from aoc_bot.config import (
+    AOC_BASE_URL,
+    USER_AGENT,
+    POLL_INTERVAL_SECONDS,
+    MAX_UNLOCK_WAIT_SECONDS,
+    is_finale_day,
+)
 
 
 class SubmitResult(Enum):
@@ -125,6 +131,9 @@ class AoCClient:
             return SubmitOutcome(SubmitResult.ALREADY_COMPLETE, feedback)
         if "both parts of this puzzle are complete" in body_lower:
             return SubmitOutcome(SubmitResult.ALREADY_COMPLETE, feedback)
+        if is_finale_day(self.year, day) and part == 2:
+            if "you've finished every puzzle" in body_lower:
+                return SubmitOutcome(SubmitResult.CORRECT, feedback)
         return SubmitOutcome(SubmitResult.UNKNOWN, feedback or body[:500])
 
     @staticmethod

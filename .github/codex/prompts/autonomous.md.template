@@ -20,6 +20,7 @@ AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py refresh
 ```
 
 {{DRY_RUN_SECTION}}
+{{FINALE_SECTION}}
 
 ## Solution files
 
@@ -45,10 +46,7 @@ def solve(data: str) -> str:
 2. Implement `part1.py` in `solutions/{{YEAR}}/{{DAY}}/`.
 3. **Loop** until `test 1` passes.
 4. {{SUBMIT_PART1_SECTION}}
-5. `refresh` → confirm `meta` shows `"has_part2": true` → `puzzle 2`.
-6. Implement `part2.py` (keep part1 working).
-7. **Loop** until `test 2` passes.
-8. {{SUBMIT_PART2_SECTION}}
+{{PART2_WORKFLOW}}
 9. Stop when done. Summarize both answers and submission results.
 
 ## Rules
