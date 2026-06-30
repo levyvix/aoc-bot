@@ -1,5 +1,12 @@
-#!/usr/bin/env bash
-# Thin wrapper — delegates to aoc_tool prepare.
-set -euo pipefail
-cd "$(dirname "$0")/.."
-exec uv run python scripts/aoc_tool.py prepare "$@"
+#!/usr/bin/env python3
+"""Fetch puzzle artifacts — delegates to aoc_tool."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    tool = Path(__file__).resolve().parent / "aoc_tool.py"
+    raise SystemExit(subprocess.call([sys.executable, str(tool), "prepare"]))
