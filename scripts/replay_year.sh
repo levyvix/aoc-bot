@@ -19,6 +19,11 @@ for day in $(seq "$START" "$END"); do
 
   export AOC_DAY="$day"
 
+  if [[ "$SKIP_COMMIT" != "true" ]]; then
+    BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+    git pull --rebase origin "$BRANCH"
+  fi
+
   need_agent=true
   if uv run python scripts/aoc_tool.py check-day --files-only; then
     uv run python scripts/aoc_tool.py prepare
@@ -42,13 +47,7 @@ for day in $(seq "$START" "$END"); do
   uv run python scripts/final_check.py
 
   if [[ "$SKIP_COMMIT" != "true" ]]; then
-    git config user.name "github-actions[bot]"
-    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-    git add "solutions/${YEAR}/${day}/"
-    if ! git diff --staged --quiet; then
-      git commit -m "aoc: ${YEAR} day ${day} solutions"
-      git push
-    fi
+    bash scripts/git_push_solutions.sh "$YEAR" "$day"
   fi
 done
 

@@ -76,13 +76,9 @@ jobs:
       - name: Commit solutions
         if: ${{ success() && github.event.inputs.skip_commit != true }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           YEAR=$(jq -r .year .aoc/meta.json)
           DAY=$(jq -r .day .aoc/meta.json)
-          git add "solutions/${YEAR}/${DAY}/"
-          git diff --staged --quiet || git commit -m "aoc: ${YEAR} day ${DAY} solutions"
-          git push
+          bash scripts/git_push_solutions.sh "$YEAR" "$DAY"
 
       - name: Upload artifacts
         if: always()
