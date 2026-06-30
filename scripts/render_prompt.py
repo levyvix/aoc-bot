@@ -15,16 +15,26 @@ OUTPUT = ARTIFACT_DIR / "prompt.md"
 def main() -> None:
     dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
 
-    # Defaults for template rendering before prepare (CI sets AOC_YEAR/AOC_DAY)
+    # Environment always wins — meta.json may be stale during multi-day replay.
     year = os.environ.get("AOC_YEAR", "2026")
     day = os.environ.get("AOC_DAY", "1")
     title = "Advent of Code"
 
     if (ARTIFACT_DIR / "meta.json").exists():
         meta = json.loads((ARTIFACT_DIR / "meta.json").read_text(encoding="utf-8"))
-        year = str(meta["year"])
-        day = str(meta["day"])
-        title = meta.get("title", title)
+        if not os.environ.get("AOC_YEAR"):
+            year = str(meta["year"])
+        if not os.environ.get("AOC_DAY"):
+            day = str(meta["day"])
+        meta_year, meta_day = int(meta["year"]), int(meta["day"])
+        if int(year) == meta_year and int(day) == meta_day:
+            title = meta.get("title", title)
+        else:
+            print(
+                f"WARNING: meta.json is {meta_year} day {meta_day} "
+                f"but prompt targets {year} day {day} — run prepare first",
+                file=sys.stderr,
+            )
 
     if dry_run:
         dry_section = (

@@ -9,6 +9,8 @@ Usage:
   uv run python scripts/aoc_tool.py refresh
   uv run python scripts/aoc_tool.py meta
   uv run python scripts/aoc_tool.py input-path
+  uv run python scripts/aoc_tool.py check-day
+  uv run python scripts/aoc_tool.py assert-day
 """
 
 from __future__ import annotations
@@ -113,6 +115,11 @@ def cmd_refresh() -> int:
 
 
 def cmd_puzzle(part: int) -> int:
+    year, day = _active_year_day()
+    err = _artifacts_mismatch(year, day)
+    if err:
+        print(f"ERROR: {err}", file=sys.stderr)
+        return 1
     path = ARTIFACT_DIR / f"puzzle-part{part}.md"
     if not path.exists():
         print(f"ERROR: {path} not found.", file=sys.stderr)
@@ -123,16 +130,22 @@ def cmd_puzzle(part: int) -> int:
     return 0
 
 
-def cmd_test(part: int) -> int:
-    meta = _load_meta()
-    year = int(meta["year"])
-    day = int(meta["day"])
-    puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
-    solver = LocalSolver()
+def _required_parts() -> list[int]:
+    dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
+    return [1] if dry_run else [1, 2]
+
+
+def _part_test_result(
+    *,
+    year: int,
+    day: int,
+    part: int,
+    puzzle_input: str,
+    solver: LocalSolver,
+) -> tuple[bool, str]:
     path = solver.part_path(year, day, part)
     if not path.exists():
-        print(f"ERROR: missing {path}", file=sys.stderr)
-        return 1
+        return False, f"missing {path}"
     try:
         result = solver.solve(
             year=year,
@@ -142,12 +155,110 @@ def cmd_test(part: int) -> int:
             puzzle_input=puzzle_input,
         )
     except (NotImplementedError, AttributeError) as exc:
-        print(f"ERROR: part{part} not implemented: {exc}", file=sys.stderr)
-        return 1
+        return False, f"part{part} not implemented: {exc}"
     if not result.answer:
-        print(f"ERROR: part{part} returned empty answer", file=sys.stderr)
+        return False, f"part{part} returned empty answer"
+    return True, result.answer
+
+
+def cmd_test(part: int) -> int:
+    year, day = _active_year_day()
+    err = _artifacts_mismatch(year, day)
+    if err:
+        print(f"ERROR: {err}", file=sys.stderr)
         return 1
-    print(f"OK part{part}={result.answer}")
+    puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
+    ok, detail = _part_test_result(
+        year=year,
+        day=day,
+        part=part,
+        puzzle_input=puzzle_input,
+        solver=LocalSolver(),
+    )
+    if not ok:
+        print(f"ERROR: {detail}", file=sys.stderr)
+        return 1
+    print(f"OK part{part}={detail}")
+    return 0
+
+
+def _active_year_day() -> tuple[int, int]:
+    """Year/day for toolkit commands — AOC_YEAR/AOC_DAY env wins over stale meta.json."""
+    env_year = os.environ.get("AOC_YEAR")
+    env_day = os.environ.get("AOC_DAY")
+    if env_year and env_day:
+        return int(env_year), int(env_day)
+    if (ARTIFACT_DIR / "meta.json").exists():
+        meta = _load_meta()
+        return int(meta["year"]), int(meta["day"])
+    settings = _settings()
+    return settings.year, resolve_day(settings)
+
+
+def _artifacts_mismatch(year: int, day: int) -> str | None:
+    if not (ARTIFACT_DIR / "meta.json").exists():
+        return "missing .aoc/meta.json — run prepare"
+    meta = _load_meta()
+    meta_year, meta_day = int(meta["year"]), int(meta["day"])
+    if meta_year != year or meta_day != day:
+        return (
+            f".aoc artifacts are {meta_year} day {meta_day}, "
+            f"but expected {year} day {day} — run prepare with AOC_DAY={day}"
+        )
+    return None
+
+
+def cmd_assert_day() -> int:
+    year, day = _active_year_day()
+    err = _artifacts_mismatch(year, day)
+    if err:
+        print(f"ERROR: {err}", file=sys.stderr)
+        return 1
+    print(f"OK: artifacts match {year} day {day} ({_load_meta().get('title', '')})")
+    return 0
+
+
+def _resolve_year_day() -> tuple[int, int]:
+    from datetime import date
+
+    year = int(os.environ.get("AOC_YEAR", str(date.today().year)))
+    day_raw = os.environ.get("AOC_DAY")
+    if not day_raw:
+        raise ValueError("AOC_DAY is required")
+    return year, int(day_raw)
+
+
+def cmd_check_day(*, files_only: bool = False) -> int:
+    """Exit 0 when day can be skipped; --files-only needs no prepare or session."""
+    year, day = _resolve_year_day()
+    parts = _required_parts()
+    solver = LocalSolver()
+
+    for part in parts:
+        if not solver.part_path(year, day, part).exists():
+            return 1
+
+    if files_only:
+        return 0
+
+    if not (ARTIFACT_DIR / "input.txt").exists():
+        print("ERROR: run prepare before check-day", file=sys.stderr)
+        return 1
+
+    puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
+    for part in parts:
+        ok, detail = _part_test_result(
+            year=year,
+            day=day,
+            part=part,
+            puzzle_input=puzzle_input,
+            solver=solver,
+        )
+        if not ok:
+            return 1
+
+    scope = "part 1" if parts == [1] else "parts 1–2"
+    print(f"SKIP: {year} day {day} already solved ({scope} pass local tests)")
     return 0
 
 
@@ -226,6 +337,16 @@ def main() -> int:
     sub.add_parser("refresh", help="Re-fetch puzzle page (after Part 1 accepted)")
     sub.add_parser("meta", help="Print .aoc/meta.json")
     sub.add_parser("input-path", help="Print path to puzzle input file")
+    p_check = sub.add_parser(
+        "check-day",
+        help="Exit 0 if day is solved; --files-only needs no prepare",
+    )
+    p_check.add_argument(
+        "--files-only",
+        action="store_true",
+        help="Only check solution files exist (no AoC fetch, no session)",
+    )
+    sub.add_parser("assert-day", help="Exit 1 if .aoc/meta.json does not match AOC_YEAR/AOC_DAY")
 
     p_puzzle = sub.add_parser("puzzle", help="Print puzzle description")
     p_puzzle.add_argument("part", type=int, choices=(1, 2))
@@ -253,6 +374,10 @@ def main() -> int:
             return cmd_meta()
         if args.command == "input-path":
             return cmd_input_path()
+        if args.command == "check-day":
+            return cmd_check_day(files_only=args.files_only)
+        if args.command == "assert-day":
+            return cmd_assert_day()
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

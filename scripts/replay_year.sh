@@ -19,7 +19,25 @@ for day in $(seq "$START" "$END"); do
 
   export AOC_DAY="$day"
 
+  need_agent=true
+  if uv run python scripts/aoc_tool.py check-day --files-only; then
+    uv run python scripts/aoc_tool.py prepare
+    uv run python scripts/aoc_tool.py assert-day
+    if uv run python scripts/aoc_tool.py check-day; then
+      need_agent=false
+    fi
+  else
+    uv run python scripts/aoc_tool.py prepare
+    uv run python scripts/aoc_tool.py assert-day
+  fi
+
+  if ! $need_agent; then
+    echo "SKIP: day ${day} already solved"
+    continue
+  fi
+
   uv run python scripts/render_prompt.py
+  uv run python scripts/aoc_tool.py assert-day
   bash scripts/run_cursor_agent.sh ".aoc/prompt.md" ".aoc/agent-output-${YEAR}-day${day}.md"
   uv run python scripts/final_check.py
 

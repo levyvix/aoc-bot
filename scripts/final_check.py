@@ -19,6 +19,13 @@ def main() -> int:
         print("ERROR: agent did not run prepare — missing .aoc/meta.json", file=sys.stderr)
         return 1
 
+    assert_result = subprocess.run(
+        ["uv", "run", "python", "scripts/aoc_tool.py", "assert-day"],
+        env=os.environ.copy(),
+    )
+    if assert_result.returncode != 0:
+        return 1
+
     failed = False
     for part in parts:
         result = subprocess.run(

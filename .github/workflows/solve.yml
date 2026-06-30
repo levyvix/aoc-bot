@@ -58,8 +58,11 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Render agent prompt
-        run: uv run python scripts/render_prompt.py
+      - name: Prepare day and render agent prompt
+        run: |
+          uv run python scripts/aoc_tool.py prepare
+          uv run python scripts/aoc_tool.py assert-day
+          uv run python scripts/render_prompt.py
 
       - name: Run autonomous agent
         env:

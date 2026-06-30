@@ -1,23 +1,22 @@
 # Autonomous Advent of Code solver — {{YEAR}} Day {{DAY}}
 
-You have full autonomy to solve today's puzzle end-to-end. Use the shell tools below.
-Loop until both parts are accepted (or Part 1 only in dry-run mode).
+**You are solving Advent of Code {{YEAR}}, Day {{DAY}} only.**  
+Do not read or modify solutions for any other day.
 
-## Toolkit
+CI already fetched today's puzzle into `.aoc/`. **Do not run `prepare`** unless `meta` shows the wrong year/day.
 
-All commands run from the repo root:
+Prefix **every** toolkit command with `AOC_YEAR={{YEAR}} AOC_DAY={{DAY}}`:
 
 ```bash
-uv run python scripts/aoc_tool.py prepare      # fetch input + puzzle text from AoC
-uv run python scripts/aoc_tool.py meta         # day, year, solution paths
-uv run python scripts/aoc_tool.py input-path   # path to your puzzle input file
-uv run python scripts/aoc_tool.py puzzle 1     # Part 1 description
-uv run python scripts/aoc_tool.py puzzle 2     # Part 2 (only after Part 1 accepted on AoC)
-uv run python scripts/aoc_tool.py test 1       # run solutions/{{YEAR}}/{{DAY}}/part1.py
-uv run python scripts/aoc_tool.py test 2       # run part2.py
-uv run python scripts/aoc_tool.py submit 1     # submit Part 1 to adventofcode.com
-uv run python scripts/aoc_tool.py submit 2     # submit Part 2
-uv run python scripts/aoc_tool.py refresh      # re-fetch page after Part 1 unlocks Part 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py meta
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py input-path
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py puzzle 1
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py puzzle 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py test 1
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py test 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py submit 1
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py submit 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py refresh
 ```
 
 {{DRY_RUN_SECTION}}
@@ -40,12 +39,10 @@ def solve(data: str) -> str:
 - Read input from the `data` argument (never hardcode answers).
 - Do **not** read `AOC_SESSION` or any secrets — `submit` handles auth.
 
-Run `prepare` first — it creates the `solutions/{{YEAR}}/{{DAY}}/` directory.
-
 ## Required workflow
 
-1. `prepare` → read `meta` and `puzzle 1`.
-2. Implement `part1.py` in the solution directory.
+1. `meta` → confirm `"day": {{DAY}}` and `"year": {{YEAR}}` → `puzzle 1`.
+2. Implement `part1.py` in `solutions/{{YEAR}}/{{DAY}}/`.
 3. **Loop** until `test 1` passes.
 4. {{SUBMIT_PART1_SECTION}}
 5. `refresh` → confirm `meta` shows `"has_part2": true` → `puzzle 2`.
