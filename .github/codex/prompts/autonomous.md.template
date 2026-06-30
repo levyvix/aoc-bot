@@ -47,7 +47,7 @@ def solve(data: str) -> str:
 3. **Loop** until `test 1` passes.
 4. {{SUBMIT_PART1_SECTION}}
 {{PART2_WORKFLOW}}
-9. Stop when done. Summarize both answers and submission results.
+9. Stop only when both `submit 1` and `submit 2` have succeeded. Summarize both answers and submission results.
 
 ## Rules
 

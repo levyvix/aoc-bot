@@ -44,11 +44,11 @@ def render_prompt(*, retry_note: str = "") -> int:
         dry_section = ""
         submit_p1 = (
             "**Loop** until `submit 1` succeeds (`OK part 1 accepted`). "
-            "On WRONG, fix and retry."
+            "On WRONG, fix and retry. Do not proceed to Part 2 until Part 1 is accepted."
         )
         submit_p2 = (
             "**Loop** until `submit 2` succeeds (`OK part 2 accepted`). "
-            "On WRONG, fix and retry."
+            "On WRONG, fix and retry. Do not stop until both parts are accepted on adventofcode.com."
         )
 
     year_int, day_int = int(year), int(day)

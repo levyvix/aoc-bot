@@ -156,6 +156,14 @@ def _both_parts_complete_on_site() -> bool:
         return client.both_parts_complete(day)
 
 
+def both_parts_complete_on_site() -> bool:
+    """True when adventofcode.com shows both parts complete for the active day."""
+    try:
+        return _both_parts_complete_on_site()
+    except ValueError:
+        return False
+
+
 def day_complete_on_site() -> int:
     """Exit 0 when adventofcode.com shows both parts complete for the active day."""
     if _both_parts_complete_on_site():
@@ -232,7 +240,7 @@ def day_fully_solved() -> bool:
         return False
     if check_day(quiet=True) != 0:
         return False
-    return _both_parts_complete_on_site()
+    return both_parts_complete_on_site()
 
 
 def submit_part(*, part: int) -> tuple[int, str]:
@@ -302,39 +310,6 @@ def input_path() -> int:
         return 1
     print(path.resolve())
     return 0
-
-
-def agent_work_complete() -> bool:
-    """True when local tests pass and AoC shows both parts accepted (when session set)."""
-    if not (ARTIFACT_DIR / "meta.json").exists():
-        return False
-    year, day = active_year_day()
-    if artifacts_mismatch(year, day):
-        return False
-    if not (ARTIFACT_DIR / "input.txt").exists():
-        return False
-
-    puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
-    solver = LocalSolver()
-    for part in required_parts():
-        ok, _detail = part_test_result(
-            year=year,
-            day=day,
-            part=part,
-            puzzle_input=puzzle_input,
-            solver=solver,
-        )
-        if not ok:
-            return False
-
-    dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
-    if dry_run or not os.environ.get("AOC_SESSION"):
-        return True
-
-    try:
-        return _both_parts_complete_on_site()
-    except ValueError:
-        return True
 
 
 def verify() -> int:

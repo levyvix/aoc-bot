@@ -4,14 +4,11 @@ import os
 import subprocess
 import sys
 import threading
-import time
 from pathlib import Path
 
 from aoc_bot.artifacts import ARTIFACT_DIR
-from aoc_bot import toolkit
 
 DEFAULT_AGENT_TIMEOUT_SECONDS = 1800
-DEFAULT_COMPLETE_POLL_SECONDS = 15
 
 
 def _stop_process(process: subprocess.Popen[str]) -> None:
@@ -52,8 +49,6 @@ def run_agent(
 
     timeout_raw = os.environ.get("AGENT_TIMEOUT_SECONDS")
     timeout = int(timeout_raw) if timeout_raw else DEFAULT_AGENT_TIMEOUT_SECONDS
-    poll_raw = os.environ.get("AGENT_COMPLETE_POLL_SECONDS")
-    poll_interval = int(poll_raw) if poll_raw else DEFAULT_COMPLETE_POLL_SECONDS
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as output_handle:
@@ -75,38 +70,15 @@ def run_agent(
         reader = threading.Thread(target=copy_output, daemon=True)
         reader.start()
 
-        deadline = time.monotonic() + timeout
-        last_poll = 0.0
-
         try:
-            while True:
-                rc = process.poll()
-                if rc is not None:
-                    reader.join(timeout=10)
-                    return rc
-
-                now = time.monotonic()
-                if now >= deadline:
-                    print(
-                        f"ERROR: agent timed out after {timeout}s — terminating",
-                        file=sys.stderr,
-                        flush=True,
-                    )
-                    _stop_process(process)
-                    reader.join(timeout=10)
-                    return 124
-
-                if now - last_poll >= poll_interval:
-                    last_poll = now
-                    if toolkit.agent_work_complete():
-                        print(
-                            "==> Both parts accepted on AoC — stopping agent",
-                            flush=True,
-                        )
-                        _stop_process(process)
-                        reader.join(timeout=10)
-                        return 0
-
-                time.sleep(1)
+            return process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            print(
+                f"ERROR: agent timed out after {timeout}s — terminating",
+                file=sys.stderr,
+                flush=True,
+            )
+            _stop_process(process)
+            return 124
         finally:
             reader.join(timeout=10)

@@ -16,11 +16,12 @@ def day_already_solved() -> bool:
     return toolkit.day_fully_solved()
 
 
-def _submit_retry_note(feedback: str) -> str:
+def _aoc_incomplete_retry_note() -> str:
     return (
-        "## Previous submit failed\n\n"
-        f"Advent of Code rejected the last answer:\n\n{feedback}\n\n"
-        "Fix the solution file(s), run `test`, then `submit` again."
+        "## Both parts must be submitted on adventofcode.com\n\n"
+        "The last run ended before both stars were earned. "
+        "Use `uv run aoc test` and `uv run aoc submit` until part 1 and part 2 "
+        "each print `OK part N accepted`. Do not stop until both are accepted."
     )
 
 
@@ -28,7 +29,7 @@ def _verify_retry_note() -> str:
     return (
         "## Previous attempt failed verification\n\n"
         "Local tests did not pass after the last agent run. "
-        "Fix the solution files until every required `test` passes."
+        "Fix the solution files until every required `test` passes, then submit."
     )
 
 
@@ -49,7 +50,7 @@ def run_solve_attempts(*, year: int, day: int, output: Path) -> int:
         agent_rc = run_agent(output_file=output)
         if agent_rc != 0:
             print(
-                f"WARN: agent exited {agent_rc} — verifying solutions anyway",
+                f"WARN: agent exited {agent_rc} — checking results anyway",
                 flush=True,
             )
 
@@ -62,15 +63,18 @@ def run_solve_attempts(*, year: int, day: int, output: Path) -> int:
         if dry_run:
             return 0
 
-        submit_rc, feedback = toolkit.submit_all_parts()
-        if submit_rc == 0:
+        if toolkit.both_parts_complete_on_site():
             return 0
 
         if attempt >= max_attempts:
+            print(
+                "ERROR: agent finished but adventofcode.com does not show both parts complete",
+                file=sys.stderr,
+            )
             return 1
 
-        retry_note = _submit_retry_note(feedback)
-        print("==> Submit failed — re-running agent with feedback", flush=True)
+        retry_note = _aoc_incomplete_retry_note()
+        print("==> AoC missing stars — re-running agent", flush=True)
 
     return 1
 
