@@ -100,7 +100,7 @@ def run_agent(
                     last_poll = now
                     if toolkit.agent_work_complete():
                         print(
-                            "==> Solutions pass local tests — stopping agent",
+                            "==> Both parts accepted on AoC — stopping agent",
                             flush=True,
                         )
                         _stop_process(process)

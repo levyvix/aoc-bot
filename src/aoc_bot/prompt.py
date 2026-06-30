@@ -9,7 +9,7 @@ from aoc_bot.artifacts import ARTIFACT_DIR, PROMPT_OUTPUT, PROMPT_TEMPLATE
 from aoc_bot.config import is_finale_day
 
 
-def render_prompt() -> int:
+def render_prompt(*, retry_note: str = "") -> int:
     dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
 
     year = os.environ.get("AOC_YEAR", "2026")
@@ -89,6 +89,8 @@ def render_prompt() -> int:
     )
 
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    if retry_note:
+        prompt = f"{retry_note.strip()}\n\n---\n\n{prompt}"
     PROMPT_OUTPUT.write_text(prompt, encoding="utf-8")
     print(f"Wrote {PROMPT_OUTPUT} ({len(prompt)} bytes)")
     return 0

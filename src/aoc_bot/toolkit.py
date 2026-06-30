@@ -166,27 +166,26 @@ def day_complete_on_site() -> int:
     return 1
 
 
-def submit_all_parts() -> int:
-    """Submit every required part; safe to call when some are already accepted."""
+def submit_all_parts() -> tuple[int, str]:
+    """Submit every required part. Returns (0, '') on success or (1, feedback) on failure."""
     if os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}:
         print("DRY RUN — submit skipped")
-        return 0
+        return 0, ""
 
     parts = required_parts()
-    if submit(1) != 0:
-        return 1
+    rc, feedback = submit_part(part=1)
+    if rc != 0:
+        return rc, feedback
 
     if 2 not in parts:
-        return 0
+        return 0, ""
 
     meta = load_meta()
     if not meta.get("finale") and not meta.get("has_part2"):
         if refresh() != 0:
             print("WARNING: Part 2 text not refreshed — submitting anyway", file=sys.stderr)
 
-    if submit(2) != 0:
-        return 1
-    return 0
+    return submit_part(part=2)
 
 
 def check_day(*, files_only: bool = False, quiet: bool = False) -> int:
@@ -236,10 +235,11 @@ def day_fully_solved() -> bool:
     return _both_parts_complete_on_site()
 
 
-def submit(part: int) -> int:
+def submit_part(*, part: int) -> tuple[int, str]:
+    """Submit one part. Returns (0, '') on success or (1, feedback) on failure."""
     if os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}:
         print("DRY RUN — submit skipped")
-        return 0
+        return 0, ""
 
     settings = Settings.from_env()
     day = resolve_day(settings)
@@ -271,12 +271,20 @@ def submit(part: int) -> int:
 
     if outcome.result in (SubmitResult.CORRECT, SubmitResult.ALREADY_COMPLETE):
         print(f"OK part {part} accepted")
-        return 0
+        return 0, ""
+
+    feedback = outcome.feedback or f"Unexpected result for part {part}: {outcome.result.value}"
     if outcome.result == SubmitResult.WRONG:
         print(f"WRONG answer for part {part} — fix the solution and retry", file=sys.stderr)
-        return 1
+        return 1, feedback
+
     print(f"Unexpected result: {outcome.result.value}", file=sys.stderr)
-    return 2
+    return 2, feedback
+
+
+def submit(part: int) -> int:
+    rc, _feedback = submit_part(part=part)
+    return rc
 
 
 def meta() -> int:
@@ -297,7 +305,7 @@ def input_path() -> int:
 
 
 def agent_work_complete() -> bool:
-    """True when all required solution files exist and pass local tests (quiet)."""
+    """True when local tests pass and AoC shows both parts accepted (when session set)."""
     if not (ARTIFACT_DIR / "meta.json").exists():
         return False
     year, day = active_year_day()
@@ -318,7 +326,15 @@ def agent_work_complete() -> bool:
         )
         if not ok:
             return False
-    return True
+
+    dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
+    if dry_run or not os.environ.get("AOC_SESSION"):
+        return True
+
+    try:
+        return _both_parts_complete_on_site()
+    except ValueError:
+        return True
 
 
 def verify() -> int:
