@@ -6,21 +6,23 @@ Automated [Advent of Code](https://adventofcode.com/) solver that runs on a sche
 
 ```mermaid
 sequenceDiagram
-    participant Cron as GitHub Actions cron
-    participant Prep as prepare_day.py
-    participant Agent as Cursor CLI agent
-    participant Verify as verify_solution.py
+    participant Cron as GitHub Actions
+    participant Prep as prepare_day
+    participant Agent as Cursor agent
     participant Submit as aoc-bot
 
-    Cron->>Prep: Fetch puzzle + input (AOC_SESSION)
-    Prep->>Agent: Render prompt from .aoc/
-    Agent->>Agent: Write solutions/dayXX.py
-    Codex->>Verify: Run against .aoc/input.txt
-    Verify->>Submit: Submit part 1
-    Submit->>Prep: Refresh puzzle (part 2 unlocks)
-    Prep->>Agent: Second pass for part 2
-    Codex->>Submit: Submit part 2
+    Cron->>Prep: Fetch input + Part 1 text
+    Prep->>Agent: Part 1 prompt only
+    Agent->>Agent: Write part1 in solutions/dayXX.py
+    Agent->>Submit: Submit Part 1 answer
+    Note over Submit: AoC unlocks Part 2
+    Cron->>Prep: refresh_part2 (re-fetch page)
+    Prep->>Agent: Part 2 prompt
+    Agent->>Agent: Implement part2
+    Agent->>Submit: Submit Part 2 answer
 ```
+
+AoC only reveals Part 2 after Part 1 is accepted. The bot never tries to solve Part 2 before submitting Part 1.
 
 Puzzles unlock at **midnight US Eastern** (05:00 UTC in December). The workflow polls for up to 2 minutes if the input is not ready yet.
 
@@ -55,16 +57,16 @@ The workflow in [`.github/workflows/solve.yml`](.github/workflows/solve.yml) run
 Manual inputs:
 
 - `day` — override the day number (for testing past puzzles)
-- `dry_run` — solve but do not submit
+- `dry_run` — solve Part 1 only (Part 2 requires submission to unlock on AoC)
 - `skip_commit` — do not push the solution back to the repo
 
 ### 5. Test with 2025 before going live
 
 1. Push the repo and add secrets (`AOC_SESSION`, `CURSOR_API_KEY`).
 2. Go to **Actions → Test Replay (2025) → Run workflow**.
-3. Defaults: year `2025`, day `1`, dry run **on** (no submission).
-4. Check the run artifacts for `.aoc/` and `solutions/day01.py`.
-5. When verify passes, re-run with **submit** checked to test the full submit path (only if you have not already completed that day).
+3. Defaults: year `2025`, day `1`, dry run **on** (Part 1 only — no submission).
+4. Check artifacts for `solutions/day01.py` with a working `part1`.
+5. For the **full two-part flow**, re-run with **submit** checked (submits Part 1 → unlocks Part 2 → solves and submits Part 2).
 
 Local replay:
 

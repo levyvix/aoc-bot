@@ -1,0 +1,35 @@
+# Advent of Code {{YEAR}} — Day {{DAY}}: {{TITLE}} (Part 2)
+
+Part 1 has been **submitted and accepted**. Part 2 is now unlocked.
+
+## Goal
+
+Update `solutions/day{{DAY_PADDED}}.py` — keep your working `part1` unchanged and implement `part2`:
+
+```python
+def part2(data: str) -> str:
+    ...
+```
+
+`part2` receives the same puzzle input as part 1 and must return the answer as a string.
+
+## Constraints
+
+- Use only the Python standard library.
+- Do **not** change `part1` unless it is broken.
+- Do **not** submit to adventofcode.com yourself.
+- Do **not** read or print secrets.
+
+## Puzzle input
+
+Same input as part 1: `.aoc/input.txt`.
+
+## Part 2 puzzle text
+
+{{PART2_SECTION}}
+
+## Workflow
+
+1. Implement `part2` in the existing solution file.
+2. Verify: `AOC_PART=2 uv run python scripts/verify_solution.py`
+3. Fix until verification passes for part 2.
