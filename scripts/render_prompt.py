@@ -1,63 +1,64 @@
 #!/usr/bin/env python3
-"""Render the agent prompt for part 1 or part 2."""
+"""Render the autonomous agent prompt."""
 
 from __future__ import annotations
 
-import argparse
 import json
-import sys
+import os
 from pathlib import Path
 
 ARTIFACT_DIR = Path(".aoc")
-PROMPTS = Path(".github/codex/prompts")
+TEMPLATE = Path(".github/codex/prompts/autonomous.md.template")
+OUTPUT = ARTIFACT_DIR / "prompt.md"
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--part", type=int, choices=(1, 2), required=True)
-    args = parser.parse_args()
+    dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
 
-    meta_path = ARTIFACT_DIR / "meta.json"
-    if not meta_path.exists():
-        print("ERROR: run prepare_day.py first", file=sys.stderr)
-        sys.exit(1)
+    # Defaults for template rendering before prepare (CI sets AOC_YEAR/AOC_DAY)
+    year = os.environ.get("AOC_YEAR", "2026")
+    day = os.environ.get("AOC_DAY", "1")
+    title = "Advent of Code"
 
-    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    day = int(meta["day"])
-    year = int(meta["year"])
+    if (ARTIFACT_DIR / "meta.json").exists():
+        meta = json.loads((ARTIFACT_DIR / "meta.json").read_text(encoding="utf-8"))
+        year = str(meta["year"])
+        day = str(meta["day"])
+        title = meta.get("title", title)
 
-    if args.part == 1:
-        template = (PROMPTS / "solve-part1.md.template").read_text(encoding="utf-8")
-        part1_text = (ARTIFACT_DIR / "puzzle-part1.md").read_text(encoding="utf-8")
-        prompt = (
-            template.replace("{{YEAR}}", str(year))
-            .replace("{{DAY}}", str(day))
-            .replace("{{DAY_PADDED}}", f"{day:02d}")
-            .replace("{{TITLE}}", meta["title"])
-            .replace("{{PART1_SECTION}}", part1_text)
+    if dry_run:
+        dry_section = (
+            "## Dry run mode\n\n"
+            "Do **not** call `submit`. Solve and verify Part 1 only. "
+            "Leave `part2` as `raise NotImplementedError(...)`."
         )
-        output = ARTIFACT_DIR / "prompt-part1.md"
+        submit_p1 = "Skip submit (dry run)."
+        submit_p2 = "Skip Part 2 entirely."
     else:
-        part2_path = ARTIFACT_DIR / "puzzle-part2.md"
-        if not part2_path.exists():
-            print(
-                "ERROR: Part 2 text not available. Submit Part 1 first, then re-run prepare_day.py.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        template = (PROMPTS / "solve-part2.md.template").read_text(encoding="utf-8")
-        part2_text = part2_path.read_text(encoding="utf-8")
-        prompt = (
-            template.replace("{{YEAR}}", str(year))
-            .replace("{{DAY}}", str(day))
-            .replace("{{DAY_PADDED}}", f"{day:02d}")
-            .replace("{{TITLE}}", meta["title"])
-            .replace("{{PART2_SECTION}}", part2_text)
+        dry_section = ""
+        submit_p1 = (
+            "**Loop** until `submit 1` succeeds (`OK part 1 accepted`). "
+            "On WRONG, fix and retry."
         )
-        output = ARTIFACT_DIR / "prompt-part2.md"
+        submit_p2 = (
+            "**Loop** until `submit 2` succeeds (`OK part 2 accepted`). "
+            "On WRONG, fix and retry."
+        )
 
-    output.write_text(prompt, encoding="utf-8")
-    print(f"Wrote {output} ({len(prompt)} bytes)")
+    template = TEMPLATE.read_text(encoding="utf-8")
+    prompt = (
+        template.replace("{{YEAR}}", year)
+        .replace("{{DAY}}", day)
+        .replace("{{DAY_PADDED}}", f"{int(day):02d}")
+        .replace("{{TITLE}}", title)
+        .replace("{{DRY_RUN_SECTION}}", dry_section)
+        .replace("{{SUBMIT_PART1_SECTION}}", submit_p1)
+        .replace("{{SUBMIT_PART2_SECTION}}", submit_p2)
+    )
+
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text(prompt, encoding="utf-8")
+    print(f"Wrote {OUTPUT} ({len(prompt)} bytes)")
 
 
 if __name__ == "__main__":

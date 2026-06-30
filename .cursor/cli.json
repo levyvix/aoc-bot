@@ -6,8 +6,17 @@
       "Write(.aoc/**)",
       "Shell(uv)",
       "Shell(python)",
-      "Shell(python3)"
+      "Shell(python3)",
+      "Shell(bash)",
+      "Shell(sleep)"
     ],
-    "deny": ["Read(**/.env*)", "Write(**/.env*)"]
+    "deny": [
+      "Read(**/.env*)",
+      "Write(**/.env*)",
+      "Shell(git)",
+      "Shell(gh)",
+      "Shell(curl)",
+      "Shell(wget)"
+    ]
   }
 }

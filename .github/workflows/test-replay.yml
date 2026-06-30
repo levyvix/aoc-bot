@@ -1,5 +1,4 @@
-# Replay-test the full pipeline against a past AoC year (default: 2025).
-# Part 2 only runs after Part 1 is submitted and unlocks on adventofcode.com.
+# Replay-test against a past AoC year (default: 2025).
 
 name: Test Replay (2025)
 
@@ -17,14 +16,9 @@ on:
         default: "1"
         type: string
       dry_run:
-        description: "Part 1 only — solve but do not submit (Part 2 needs submit)"
+        description: "Part 1 only — agent must not submit"
         required: true
         default: true
-        type: boolean
-      submit:
-        description: "Full run: submit Part 1, unlock Part 2, solve and submit Part 2"
-        required: false
-        default: false
         type: boolean
 
 concurrency:
@@ -34,11 +28,14 @@ concurrency:
 jobs:
   replay:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     env:
       AOC_YEAR: ${{ github.event.inputs.year }}
       AOC_DAY: ${{ github.event.inputs.day }}
+      AOC_DRY_RUN: ${{ github.event.inputs.dry_run == true && 'true' || '' }}
+      AOC_SESSION: ${{ secrets.AOC_SESSION }}
       CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
 
     steps:
@@ -58,39 +55,16 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # ── Phase 1: Part 1 only (Part 2 is locked on AoC) ──
-      - name: Prepare puzzle artifacts
-        env:
-          AOC_SESSION: ${{ secrets.AOC_SESSION }}
-        run: uv run python scripts/prepare_day.py
+      - name: Render agent prompt
+        run: uv run python scripts/render_prompt.py
 
-      - name: Render Part 1 prompt
-        run: uv run python scripts/render_prompt.py --part 1
-
-      - name: Solve Part 1 (with retries)
+      - name: Run autonomous agent
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-          AOC_SESSION: ${{ secrets.AOC_SESSION }}
-          AOC_MAX_ATTEMPTS: ${{ vars.AOC_MAX_ATTEMPTS || '3' }}
-        run: bash scripts/solve_part.sh 1 ${{ github.event.inputs.submit == true && 'true' || 'false' }}
+        run: bash scripts/run_cursor_agent.sh .aoc/prompt.md .aoc/agent-output.md
 
-      - name: Refresh puzzle (unlock Part 2)
-        if: ${{ github.event.inputs.submit == true }}
-        env:
-          AOC_SESSION: ${{ secrets.AOC_SESSION }}
-        run: uv run python scripts/refresh_part2.py
-
-      - name: Render Part 2 prompt
-        if: ${{ github.event.inputs.submit == true }}
-        run: uv run python scripts/render_prompt.py --part 2
-
-      - name: Solve Part 2 (with retries)
-        if: ${{ github.event.inputs.submit == true }}
-        env:
-          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-          AOC_SESSION: ${{ secrets.AOC_SESSION }}
-          AOC_MAX_ATTEMPTS: ${{ vars.AOC_MAX_ATTEMPTS || '3' }}
-        run: bash scripts/solve_part.sh 2 true
+      - name: Post-agent check
+        run: uv run python scripts/final_check.py
 
       - name: Upload artifacts
         if: always()
