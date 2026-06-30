@@ -1,0 +1,128 @@
+name: AoC Daily Solve
+
+on:
+  schedule:
+    # Midnight US Eastern (EST, UTC-5) → 05:00 UTC. Dec 1–12.
+    - cron: "0 5 1-12 12 *"
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "AoC day override (1–25)"
+        required: false
+        type: string
+      year:
+        description: "AoC year override (e.g. 2025 for replay testing)"
+        required: false
+        type: string
+      dry_run:
+        description: "Solve only — do not submit to AoC"
+        required: false
+        type: boolean
+        default: false
+      skip_commit:
+        description: "Do not commit the solution back to the repo"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: aoc-solve-${{ github.event.inputs.day || 'scheduled' }}
+  cancel-in-progress: false
+
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      AOC_YEAR: ${{ github.event.inputs.year || vars.AOC_YEAR || '2026' }}
+      AOC_DAY: ${{ github.event.inputs.day }}
+      AOC_DRY_RUN: ${{ github.event.inputs.dry_run && 'true' || '' }}
+      CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Prepare puzzle artifacts
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+        run: uv run python scripts/prepare_day.py
+
+      - name: Render agent prompt
+        run: uv run python scripts/render_prompt.py
+
+      - name: Run Cursor agent
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: bash scripts/run_cursor_agent.sh .aoc/codex-prompt.md .aoc/agent-output.md
+
+      - name: Verify solution
+        run: uv run python scripts/verify_solution.py
+
+      - name: Submit part 1
+        if: ${{ !github.event.inputs.dry_run }}
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+          AOC_SOLVER: local
+          AOC_PART: "1"
+        run: uv run aoc-bot
+
+      - name: Refresh puzzle (unlock part 2 description)
+        if: ${{ !github.event.inputs.dry_run }}
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+        run: uv run python scripts/prepare_day.py
+
+      - name: Render agent prompt (part 2)
+        if: ${{ !github.event.inputs.dry_run }}
+        run: uv run python scripts/render_prompt.py
+
+      - name: Run Cursor agent (part 2)
+        if: ${{ !github.event.inputs.dry_run }}
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: bash scripts/run_cursor_agent.sh .aoc/codex-prompt.md .aoc/agent-output-part2.md
+
+      - name: Verify solution (part 2)
+        if: ${{ !github.event.inputs.dry_run }}
+        run: uv run python scripts/verify_solution.py
+
+      - name: Submit part 2
+        if: ${{ !github.event.inputs.dry_run }}
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+          AOC_SOLVER: local
+          AOC_PART: "2"
+        run: uv run aoc-bot
+
+      - name: Commit solution
+        if: ${{ success() && !github.event.inputs.skip_commit }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add solutions/ .aoc/meta.json
+          git diff --staged --quiet || git commit -m "aoc: day $(cat .aoc/day.txt) solution"
+          git push
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoc-day-${{ github.run_id }}
+          path: |
+            .aoc/
+            solutions/

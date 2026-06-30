@@ -1,0 +1,47 @@
+# Advent of Code {{YEAR}} — Day {{DAY}}: {{TITLE}}
+
+You are solving today's Advent of Code puzzle in this repository.
+
+## Goal
+
+Implement `solutions/day{{DAY_PADDED}}.py` with:
+
+```python
+def part1(data: str) -> str:
+    ...
+
+def part2(data: str) -> str:
+    ...
+```
+
+Each function receives the full puzzle input as a string and must return the answer as a string (digits only unless the puzzle says otherwise).
+
+## Constraints
+
+- Use only the Python standard library.
+- Read input only from the `data` parameter — never hardcode answers.
+- Match the style of `solutions/_template.py`.
+- Do **not** submit to adventofcode.com yourself. A later CI step handles submission.
+- Do **not** read or print `AOC_SESSION` or any secrets.
+
+## Puzzle input
+
+The real input is in `.aoc/input.txt` ({{HAS_PART2}} part 2 text available).
+
+## Part 1 puzzle text
+
+{{PART1_SECTION}}
+
+{{PART2_SECTION}}
+
+## Workflow
+
+1. Create or update `solutions/day{{DAY_PADDED}}.py`.
+2. Verify with: `uv run python scripts/verify_solution.py`
+3. If verification fails, fix the solution and verify again until both implemented parts pass.
+4. Stop when `verify_solution.py` prints answers for all implemented parts.
+
+## Reference
+
+- `src/aoc_bot/solver/local.py` — how solutions are loaded
+- `solutions/_template.py` — expected function signatures

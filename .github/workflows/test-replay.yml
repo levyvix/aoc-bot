@@ -1,0 +1,121 @@
+# Replay-test the full pipeline against a past AoC year (default: 2025).
+# Use this before switching the production workflow to the current year.
+
+name: Test Replay (2025)
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Event year to replay"
+        required: true
+        default: "2025"
+        type: string
+      day:
+        description: "Day to solve (1–12 for 2025)"
+        required: true
+        default: "1"
+        type: string
+      dry_run:
+        description: "Skip AoC submission (recommended for first test)"
+        required: true
+        default: true
+        type: boolean
+      submit:
+        description: "Submit answers to AoC (overrides dry_run when checked)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: aoc-test-${{ github.event.inputs.year }}-${{ github.event.inputs.day }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      AOC_YEAR: ${{ github.event.inputs.year }}
+      AOC_DAY: ${{ github.event.inputs.day }}
+      AOC_DRY_RUN: ${{ github.event.inputs.submit && '' || 'true' }}
+      CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Prepare puzzle artifacts
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+        run: uv run python scripts/prepare_day.py
+
+      - name: Render agent prompt
+        run: uv run python scripts/render_prompt.py
+
+      - name: Run Cursor agent
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: bash scripts/run_cursor_agent.sh .aoc/codex-prompt.md .aoc/agent-output.md
+
+      - name: Verify solution
+        run: uv run python scripts/verify_solution.py
+
+      - name: Submit part 1
+        if: ${{ github.event.inputs.submit }}
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+          AOC_SOLVER: local
+          AOC_PART: "1"
+        run: uv run aoc-bot
+
+      - name: Refresh puzzle (part 2 text)
+        if: ${{ github.event.inputs.submit }}
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+        run: uv run python scripts/prepare_day.py
+
+      - name: Render agent prompt (part 2)
+        if: ${{ github.event.inputs.submit }}
+        run: uv run python scripts/render_prompt.py
+
+      - name: Run Cursor agent (part 2)
+        if: ${{ github.event.inputs.submit }}
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: bash scripts/run_cursor_agent.sh .aoc/codex-prompt.md .aoc/agent-output-part2.md
+
+      - name: Verify solution (part 2)
+        if: ${{ github.event.inputs.submit }}
+        run: uv run python scripts/verify_solution.py
+
+      - name: Submit part 2
+        if: ${{ github.event.inputs.submit }}
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+          AOC_SOLVER: local
+          AOC_PART: "2"
+        run: uv run aoc-bot
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoc-replay-${{ github.event.inputs.year }}-day-${{ github.event.inputs.day }}
+          path: |
+            .aoc/
+            solutions/

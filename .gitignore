@@ -1,0 +1,11 @@
+.env
+.aoc/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+uv.lock
+inputs/
+*.egg-info/
+dist/
+build/
