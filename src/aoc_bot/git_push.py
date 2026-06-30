@@ -11,6 +11,7 @@ def push_solutions(year: int, day: int) -> int:
     _run_git("config", "user.name", "github-actions[bot]")
     _run_git("config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
 
+    _discard_aoc_artifacts()
     branch = subprocess.check_output(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True
     ).strip()
@@ -28,8 +29,14 @@ def push_solutions(year: int, day: int) -> int:
     return 0
 
 
+def _discard_aoc_artifacts() -> None:
+    """Drop ephemeral .aoc files so git pull/push is not blocked."""
+    subprocess.run(["git", "clean", "-fd", "--", ".aoc"], check=False)
+
+
 def pull_rebase() -> int:
     try:
+        _discard_aoc_artifacts()
         branch = subprocess.check_output(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True
         ).strip()

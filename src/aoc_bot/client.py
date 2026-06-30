@@ -77,6 +77,12 @@ class AoCClient:
         response.raise_for_status()
         return response.text
 
+    def both_parts_complete(self, day: int) -> bool:
+        """True when the logged-in account has both stars for this day."""
+        response = self._client.get(f"/{self.year}/day/{day}")
+        response.raise_for_status()
+        return "Both parts of this puzzle are complete!" in response.text
+
     def get_puzzle_page(self, day: int) -> PuzzlePage:
         response = self._client.get(f"/{self.year}/day/{day}")
         response.raise_for_status()

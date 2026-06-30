@@ -145,6 +145,21 @@ def assert_day() -> int:
     return 0
 
 
+def day_complete_on_site() -> int:
+    """Exit 0 when adventofcode.com shows both parts complete for the active day."""
+    settings = Settings.from_env()
+    day = resolve_day(settings)
+    dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
+    if dry_run:
+        return 1
+
+    with AoCClient(settings.session, settings.year) as client:
+        if client.both_parts_complete(day):
+            print(f"SKIP: {settings.year} day {day} already complete on adventofcode.com")
+            return 0
+    return 1
+
+
 def check_day(*, files_only: bool = False) -> int:
     year, day = resolve_year_day()
     parts = required_parts()

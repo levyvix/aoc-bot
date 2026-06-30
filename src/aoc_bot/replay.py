@@ -10,13 +10,17 @@ from aoc_bot import toolkit
 
 
 def day_already_solved() -> bool:
-    if toolkit.check_day(files_only=True) != 0:
-        return False
-    if toolkit.prepare() != 0:
-        return False
-    if toolkit.assert_day() != 0:
-        return False
-    return toolkit.check_day() == 0
+    if toolkit.check_day(files_only=True) == 0:
+        if toolkit.prepare() != 0:
+            return False
+        if toolkit.assert_day() != 0:
+            return False
+        return toolkit.check_day() == 0
+
+    if toolkit.day_complete_on_site() == 0:
+        return True
+
+    return False
 
 
 def solve_day(*, skip_commit: bool | None = None) -> int:
@@ -76,8 +80,12 @@ def replay_year(
             return 1
 
         output = ARTIFACT_DIR / f"agent-output-{year}-day{day}.md"
-        if run_agent(output_file=output) != 0:
-            return 1
+        agent_rc = run_agent(output_file=output)
+        if agent_rc != 0:
+            print(
+                f"WARN: agent exited {agent_rc} — verifying solutions anyway",
+                flush=True,
+            )
         if toolkit.verify() != 0:
             return 1
 
