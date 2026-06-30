@@ -10,17 +10,7 @@ from aoc_bot import toolkit
 
 
 def day_already_solved() -> bool:
-    if toolkit.check_day(files_only=True) == 0:
-        if toolkit.prepare() != 0:
-            return False
-        if toolkit.assert_day() != 0:
-            return False
-        return toolkit.check_day() == 0
-
-    if toolkit.day_complete_on_site() == 0:
-        return True
-
-    return False
+    return toolkit.day_fully_solved()
 
 
 def solve_day(*, skip_commit: bool | None = None) -> int:
@@ -37,6 +27,8 @@ def solve_day(*, skip_commit: bool | None = None) -> int:
             flush=True,
         )
     if toolkit.verify() != 0:
+        return 1
+    if toolkit.submit_all_parts() != 0:
         return 1
 
     should_skip = skip_commit if skip_commit is not None else skip_commit_enabled()
@@ -71,7 +63,8 @@ def replay_year(
             return 1
 
         if day_already_solved():
-            print(f"SKIP: day {day} already solved")
+            year, day = toolkit.resolve_year_day()
+            print(f"SKIP: day {day} fully solved (local tests + AoC stars)")
             continue
 
         if toolkit.prepare() != 0:
@@ -91,6 +84,8 @@ def replay_year(
                 flush=True,
             )
         if toolkit.verify() != 0:
+            return 1
+        if toolkit.submit_all_parts() != 0:
             return 1
 
         if not should_skip and push_solutions(year, day) != 0:

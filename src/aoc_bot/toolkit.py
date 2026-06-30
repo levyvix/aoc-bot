@@ -145,22 +145,51 @@ def assert_day() -> int:
     return 0
 
 
-def day_complete_on_site() -> int:
-    """Exit 0 when adventofcode.com shows both parts complete for the active day."""
+def _both_parts_complete_on_site() -> bool:
     settings = Settings.from_env()
     day = resolve_day(settings)
     dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
     if dry_run:
-        return 1
+        return False
 
     with AoCClient(settings.session, settings.year) as client:
-        if client.both_parts_complete(day):
-            print(f"SKIP: {settings.year} day {day} already complete on adventofcode.com")
-            return 0
+        return client.both_parts_complete(day)
+
+
+def day_complete_on_site() -> int:
+    """Exit 0 when adventofcode.com shows both parts complete for the active day."""
+    if _both_parts_complete_on_site():
+        settings = Settings.from_env()
+        day = resolve_day(settings)
+        print(f"SKIP: {settings.year} day {day} already complete on adventofcode.com")
+        return 0
     return 1
 
 
-def check_day(*, files_only: bool = False) -> int:
+def submit_all_parts() -> int:
+    """Submit every required part; safe to call when some are already accepted."""
+    if os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}:
+        print("DRY RUN — submit skipped")
+        return 0
+
+    parts = required_parts()
+    if submit(1) != 0:
+        return 1
+
+    if 2 not in parts:
+        return 0
+
+    meta = load_meta()
+    if not meta.get("finale") and not meta.get("has_part2"):
+        if refresh() != 0:
+            print("WARNING: Part 2 text not refreshed — submitting anyway", file=sys.stderr)
+
+    if submit(2) != 0:
+        return 1
+    return 0
+
+
+def check_day(*, files_only: bool = False, quiet: bool = False) -> int:
     year, day = resolve_year_day()
     parts = required_parts()
     solver = LocalSolver()
@@ -189,8 +218,22 @@ def check_day(*, files_only: bool = False) -> int:
             return 1
 
     scope = "part 1" if parts == [1] else "parts 1–2"
-    print(f"SKIP: {year} day {day} already solved ({scope} pass local tests)")
+    if not quiet:
+        print(f"SKIP: {year} day {day} already solved ({scope} pass local tests)")
     return 0
+
+
+def day_fully_solved() -> bool:
+    """True when local tests pass and adventofcode.com shows both parts complete."""
+    if check_day(files_only=True, quiet=True) != 0:
+        return False
+    if prepare() != 0:
+        return False
+    if assert_day() != 0:
+        return False
+    if check_day(quiet=True) != 0:
+        return False
+    return _both_parts_complete_on_site()
 
 
 def submit(part: int) -> int:
