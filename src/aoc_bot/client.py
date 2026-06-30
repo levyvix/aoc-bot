@@ -72,7 +72,7 @@ class AoCClient:
         title_match = re.search(r"<title>.*?Day (\d+) - (.+?)\s*\|", html)
         title = title_match.group(2) if title_match else f"Day {day}"
 
-        articles = re.findall(r"<article>(.*?)</article>", html, flags=re.DOTALL)
+        articles = re.findall(r"<article[^>]*>(.*?)</article>", html, flags=re.DOTALL)
         if not articles:
             raise ValueError(f"Could not parse puzzle description for day {day}")
 
