@@ -79,7 +79,7 @@ jobs:
 
       # ── Phase 2: submit Part 1 → unlock Part 2 → solve Part 2 ──
       - name: Submit Part 1
-        if: ${{ github.event.inputs.submit }}
+        if: ${{ github.event.inputs.submit == true }}
         env:
           AOC_SESSION: ${{ secrets.AOC_SESSION }}
           AOC_SOLVER: local
@@ -87,29 +87,29 @@ jobs:
         run: uv run aoc-bot
 
       - name: Refresh puzzle (unlock Part 2)
-        if: ${{ github.event.inputs.submit }}
+        if: ${{ github.event.inputs.submit == true }}
         env:
           AOC_SESSION: ${{ secrets.AOC_SESSION }}
         run: uv run python scripts/refresh_part2.py
 
       - name: Render Part 2 prompt
-        if: ${{ github.event.inputs.submit }}
+        if: ${{ github.event.inputs.submit == true }}
         run: uv run python scripts/render_prompt.py --part 2
 
       - name: Run Cursor agent (Part 2)
-        if: ${{ github.event.inputs.submit }}
+        if: ${{ github.event.inputs.submit == true }}
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: bash scripts/run_cursor_agent.sh .aoc/prompt-part2.md .aoc/agent-output-part2.md
 
       - name: Verify Part 2
-        if: ${{ github.event.inputs.submit }}
+        if: ${{ github.event.inputs.submit == true }}
         env:
           AOC_PART: "2"
         run: uv run python scripts/verify_solution.py
 
       - name: Submit Part 2
-        if: ${{ github.event.inputs.submit }}
+        if: ${{ github.event.inputs.submit == true }}
         env:
           AOC_SESSION: ${{ secrets.AOC_SESSION }}
           AOC_SOLVER: local
