@@ -253,6 +253,31 @@ def input_path() -> int:
     return 0
 
 
+def agent_work_complete() -> bool:
+    """True when all required solution files exist and pass local tests (quiet)."""
+    if not (ARTIFACT_DIR / "meta.json").exists():
+        return False
+    year, day = active_year_day()
+    if artifacts_mismatch(year, day):
+        return False
+    if not (ARTIFACT_DIR / "input.txt").exists():
+        return False
+
+    puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
+    solver = LocalSolver()
+    for part in required_parts():
+        ok, _detail = part_test_result(
+            year=year,
+            day=day,
+            part=part,
+            puzzle_input=puzzle_input,
+            solver=solver,
+        )
+        if not ok:
+            return False
+    return True
+
+
 def verify() -> int:
     parts = required_parts()
     if not (ARTIFACT_DIR / "meta.json").exists():

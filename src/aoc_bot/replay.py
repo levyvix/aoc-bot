@@ -30,8 +30,12 @@ def solve_day(*, skip_commit: bool | None = None) -> int:
         return 1
     if render_prompt() != 0:
         return 1
-    if run_agent() != 0:
-        return 1
+    agent_rc = run_agent()
+    if agent_rc != 0:
+        print(
+            f"WARN: agent exited {agent_rc} — verifying solutions anyway",
+            flush=True,
+        )
     if toolkit.verify() != 0:
         return 1
 
