@@ -49,8 +49,9 @@ Part 2 text only appears after Part 1 is accepted — the agent must `submit 1` 
 
 ### Workflows
 
-- **[solve.yml](.github/workflows/solve.yml)** — Dec 1–12 at 05:00 UTC + manual dispatch
-- **[test-replay.yml](.github/workflows/test-replay.yml)** — replay 2025 puzzles (`dry_run` = Part 1 only, no submit)
+- **[solve.yml](.github/workflows/solve.yml)** — Dec 1–12 at 05:00 UTC + manual dispatch (live event)
+- **[test-replay.yml](.github/workflows/test-replay.yml)** — single-day replay test
+- **[replay-year.yml](.github/workflows/replay-year.yml)** — full year replay (e.g. all 25 days of 2021)
 
 ## Local usage
 

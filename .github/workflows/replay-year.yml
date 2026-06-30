@@ -1,0 +1,83 @@
+# Replay an entire Advent of Code year (default: 2021, days 1–25).
+# Days run sequentially in one job so solutions commit in order.
+
+name: Replay Year
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Event year"
+        required: true
+        default: "2021"
+        type: string
+      start_day:
+        description: "First day (inclusive)"
+        required: true
+        default: "1"
+        type: string
+      end_day:
+        description: "Last day (inclusive; 2021 = 25)"
+        required: true
+        default: "25"
+        type: string
+      dry_run:
+        description: "Part 1 only per day — no submit"
+        required: false
+        type: boolean
+        default: false
+      skip_commit:
+        description: "Do not push solutions to the repo"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: replay-year-${{ github.event.inputs.year }}
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    permissions:
+      contents: write
+    env:
+      AOC_YEAR: ${{ github.event.inputs.year }}
+      AOC_START_DAY: ${{ github.event.inputs.start_day }}
+      AOC_END_DAY: ${{ github.event.inputs.end_day }}
+      AOC_DRY_RUN: ${{ github.event.inputs.dry_run == true && 'true' || '' }}
+      AOC_SKIP_COMMIT: ${{ github.event.inputs.skip_commit == true && 'true' || '' }}
+      AOC_SESSION: ${{ secrets.AOC_SESSION }}
+      CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Replay year
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: bash scripts/replay_year.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoc-replay-${{ github.event.inputs.year }}
+          path: |
+            .aoc/
+            solutions/
