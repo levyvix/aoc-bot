@@ -24,6 +24,8 @@ sequenceDiagram
 
 AoC only reveals Part 2 after Part 1 is accepted. The bot never tries to solve Part 2 before submitting Part 1.
 
+Each part runs in a **retry loop** (default 3 attempts): if verification fails or AoC rejects the answer, the agent gets feedback and tries again.
+
 Puzzles unlock at **midnight US Eastern** (05:00 UTC in December). The workflow polls for up to 2 minutes if the input is not ready yet.
 
 ## Setup
@@ -46,6 +48,7 @@ Puzzles unlock at **midnight US Eastern** (05:00 UTC in December). The workflow 
 For **2025 replay testing**, use the [Test Replay workflow](.github/workflows/test-replay.yml) or pass `year: 2025` manually on *AoC Daily Solve*.
 
 | `CURSOR_MODEL` | `composer-2.5` | Model for `agent` in CI |
+| `AOC_MAX_ATTEMPTS` | `3` | Agent retries per part on verify/submit failure |
 
 ### 4. Enable the workflow
 

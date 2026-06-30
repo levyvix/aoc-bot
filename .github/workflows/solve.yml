@@ -65,23 +65,12 @@ jobs:
       - name: Render Part 1 prompt
         run: uv run python scripts/render_prompt.py --part 1
 
-      - name: Run Cursor agent (Part 1)
+      - name: Solve Part 1 (with retries)
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: bash scripts/run_cursor_agent.sh .aoc/prompt-part1.md .aoc/agent-output-part1.md
-
-      - name: Verify Part 1
-        env:
-          AOC_PART: "1"
-        run: uv run python scripts/verify_solution.py
-
-      - name: Submit Part 1
-        if: ${{ github.event.inputs.dry_run != true }}
-        env:
           AOC_SESSION: ${{ secrets.AOC_SESSION }}
-          AOC_SOLVER: local
-          AOC_PART: "1"
-        run: uv run aoc-bot
+          AOC_MAX_ATTEMPTS: ${{ vars.AOC_MAX_ATTEMPTS || '3' }}
+        run: bash scripts/solve_part.sh 1 ${{ github.event.inputs.dry_run != true && 'true' || 'false' }}
 
       # ── Phase 2: only after Part 1 submission unlocks the description ──
       - name: Refresh puzzle (unlock Part 2)
@@ -94,25 +83,13 @@ jobs:
         if: ${{ github.event.inputs.dry_run != true }}
         run: uv run python scripts/render_prompt.py --part 2
 
-      - name: Run Cursor agent (Part 2)
+      - name: Solve Part 2 (with retries)
         if: ${{ github.event.inputs.dry_run != true }}
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: bash scripts/run_cursor_agent.sh .aoc/prompt-part2.md .aoc/agent-output-part2.md
-
-      - name: Verify Part 2
-        if: ${{ github.event.inputs.dry_run != true }}
-        env:
-          AOC_PART: "2"
-        run: uv run python scripts/verify_solution.py
-
-      - name: Submit Part 2
-        if: ${{ github.event.inputs.dry_run != true }}
-        env:
           AOC_SESSION: ${{ secrets.AOC_SESSION }}
-          AOC_SOLVER: local
-          AOC_PART: "2"
-        run: uv run aoc-bot
+          AOC_MAX_ATTEMPTS: ${{ vars.AOC_MAX_ATTEMPTS || '3' }}
+        run: bash scripts/solve_part.sh 2 true
 
       - name: Commit solution
         if: ${{ success() && github.event.inputs.skip_commit != true }}

@@ -26,6 +26,12 @@ class PuzzlePage:
     part2_html: str | None
 
 
+@dataclass
+class SubmitOutcome:
+    result: SubmitResult
+    feedback: str = ""
+
+
 class AoCClient:
     def __init__(self, session: str, year: int) -> None:
         self.year = year
@@ -93,26 +99,54 @@ class AoCClient:
         return PuzzlePage(title=title, part1_html=part1_html, part2_html=part2_html)
 
     def submit(self, day: int, part: int, answer: str) -> SubmitResult:
+        return self.submit_detail(day, part, answer).result
+
+    def submit_detail(self, day: int, part: int, answer: str) -> SubmitOutcome:
         response = self._client.post(
             f"/{self.year}/day/{day}/answer",
             data={"level": str(part), "answer": str(answer)},
         )
         response.raise_for_status()
-        body = response.text.lower()
+        body = response.text
+        body_lower = body.lower()
 
-        if "that's the right answer" in body:
-            return SubmitResult.CORRECT
-        if "you gave an answer too recently" in body:
-            return SubmitResult.TOO_SOON
-        if "that's not the right answer" in body:
-            return SubmitResult.WRONG
-        if "you don't seem to be solving the right level" in body:
-            return SubmitResult.ALREADY_COMPLETE
-        if "did you already complete it" in body:
-            return SubmitResult.ALREADY_COMPLETE
-        if "both parts of this puzzle are complete" in body:
-            return SubmitResult.ALREADY_COMPLETE
-        return SubmitResult.UNKNOWN
+        feedback = self._extract_submit_feedback(body)
+
+        if "that's the right answer" in body_lower:
+            return SubmitOutcome(SubmitResult.CORRECT, feedback)
+        if "you gave an answer too recently" in body_lower:
+            return SubmitOutcome(SubmitResult.TOO_SOON, feedback)
+        if "that's not the right answer" in body_lower:
+            hint = feedback or f"Answer {answer!r} was rejected by Advent of Code."
+            return SubmitOutcome(SubmitResult.WRONG, hint)
+        if "you don't seem to be solving the right level" in body_lower:
+            return SubmitOutcome(SubmitResult.ALREADY_COMPLETE, feedback)
+        if "did you already complete it" in body_lower:
+            return SubmitOutcome(SubmitResult.ALREADY_COMPLETE, feedback)
+        if "both parts of this puzzle are complete" in body_lower:
+            return SubmitOutcome(SubmitResult.ALREADY_COMPLETE, feedback)
+        return SubmitOutcome(SubmitResult.UNKNOWN, feedback or body[:500])
+
+    @staticmethod
+    def _extract_submit_feedback(html: str) -> str:
+        soup = BeautifulSoup(html, "html.parser")
+        for node in soup.find_all(["p", "article"]):
+            text = node.get_text(" ", strip=True)
+            if not text:
+                continue
+            lower = text.lower()
+            if any(
+                phrase in lower
+                for phrase in (
+                    "not the right answer",
+                    "too high",
+                    "too low",
+                    "already complete",
+                    "right answer",
+                )
+            ):
+                return text
+        return ""
 
     def submit_with_retry(
         self,
@@ -124,9 +158,9 @@ class AoCClient:
         max_attempts: int = 5,
     ) -> SubmitResult:
         for attempt in range(max_attempts):
-            result = self.submit(day, part, answer)
-            if result != SubmitResult.TOO_SOON:
-                return result
+            outcome = self.submit_detail(day, part, answer)
+            if outcome.result != SubmitResult.TOO_SOON:
+                return outcome.result
             wait = cooldown * (attempt + 1)
             time.sleep(wait)
         return SubmitResult.TOO_SOON
