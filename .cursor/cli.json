@@ -5,9 +5,9 @@
       "Write(solutions/**)",
       "Write(.aoc/**)",
       "Shell(uv)",
+      "Shell(aoc)",
       "Shell(python)",
       "Shell(python3)",
-      "Shell(bash)",
       "Shell(sleep)"
     ],
     "deny": [

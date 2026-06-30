@@ -7,12 +7,10 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.0",
     "beautifulsoup4>=4.12.0",
-    "openai>=1.60.0",
-    "python-dotenv>=1.0.0",
 ]
 
 [project.scripts]
-aoc-bot = "aoc_bot.runner:main"
+aoc = "aoc_bot.cli:main"
 
 [build-system]
 requires = ["hatchling"]

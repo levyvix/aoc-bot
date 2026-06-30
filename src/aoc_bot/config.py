@@ -20,11 +20,7 @@ class Settings:
     session: str
     year: int
     day: int | None
-    openai_api_key: str | None
-    openai_model: str
-    solver: str  # "llm" | "local" | "auto"
     dry_run: bool
-    part: int | None  # 1, 2, or None for both
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -37,20 +33,11 @@ class Settings:
         if not session:
             raise ValueError("AOC_SESSION is required")
 
-        part_raw = os.environ.get("AOC_PART")
-        part = int(part_raw) if part_raw else None
-        if part is not None and part not in (1, 2):
-            raise ValueError("AOC_PART must be 1 or 2")
-
         return cls(
             session=session,
             year=year,
             day=day,
-            openai_api_key=os.environ.get("OPENAI_API_KEY"),
-            openai_model=os.environ.get("OPENAI_MODEL", "gpt-4.1"),
-            solver=os.environ.get("AOC_SOLVER", "auto"),
             dry_run=os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"},
-            part=part,
         )
 
 

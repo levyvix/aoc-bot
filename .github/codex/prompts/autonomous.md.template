@@ -8,15 +8,15 @@ CI already fetched today's puzzle into `.aoc/`. **Do not run `prepare`** unless 
 Prefix **every** toolkit command with `AOC_YEAR={{YEAR}} AOC_DAY={{DAY}}`:
 
 ```bash
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py meta
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py input-path
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py puzzle 1
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py puzzle 2
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py test 1
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py test 2
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py submit 1
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py submit 2
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run python scripts/aoc_tool.py refresh
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc meta
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc input-path
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc puzzle 1
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc puzzle 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc test 1
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc test 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc submit 1
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc submit 2
+AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc refresh
 ```
 
 {{DRY_RUN_SECTION}}
@@ -53,5 +53,5 @@ def solve(data: str) -> str:
 
 - AoC rate-limits submissions to ~1/minute — if submit says rate limited, wait and retry.
 - If submit returns WRONG, read the feedback, fix the code, `test` again, then `submit` again.
-- Part 2 text is **not** available until Part 1 is accepted on adventofcode.com.
+- Part 2 text is **not** available until Part 1 is accepted on adventofcode.com (except finale days).
 - Test locally before every submit.

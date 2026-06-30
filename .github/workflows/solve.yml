@@ -38,6 +38,7 @@ jobs:
       AOC_YEAR: ${{ github.event.inputs.year || vars.AOC_YEAR || '2026' }}
       AOC_DAY: ${{ github.event.inputs.day }}
       AOC_DRY_RUN: ${{ github.event.inputs.dry_run == true && 'true' || '' }}
+      AOC_SKIP_COMMIT: ${{ github.event.inputs.skip_commit == true && 'true' || '' }}
       AOC_SESSION: ${{ secrets.AOC_SESSION }}
       CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
 
@@ -58,27 +59,10 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Prepare day and render agent prompt
-        run: |
-          uv run python scripts/aoc_tool.py prepare
-          echo "AOC_DAY=$(jq -r .day .aoc/meta.json)" >> "$GITHUB_ENV"
-          uv run python scripts/aoc_tool.py assert-day
-          uv run python scripts/render_prompt.py
-
-      - name: Run autonomous agent
+      - name: Solve day
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: bash scripts/run_cursor_agent.sh .aoc/prompt.md .aoc/agent-output.md
-
-      - name: Post-agent check
-        run: uv run python scripts/final_check.py
-
-      - name: Commit solutions
-        if: ${{ success() && github.event.inputs.skip_commit != true }}
-        run: |
-          YEAR=$(jq -r .year .aoc/meta.json)
-          DAY=$(jq -r .day .aoc/meta.json)
-          bash scripts/git_push_solutions.sh "$YEAR" "$DAY"
+        run: uv run aoc solve-day
 
       - name: Upload artifacts
         if: always()

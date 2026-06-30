@@ -71,7 +71,7 @@ jobs:
       - name: Replay year
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: bash scripts/replay_year.sh
+        run: uv run aoc replay-year
 
       - name: Upload artifacts
         if: always()

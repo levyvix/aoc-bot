@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-"""Render the autonomous agent prompt."""
-
 from __future__ import annotations
 
 import json
@@ -8,20 +5,13 @@ import os
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-
+from aoc_bot.artifacts import ARTIFACT_DIR, PROMPT_OUTPUT, PROMPT_TEMPLATE
 from aoc_bot.config import is_finale_day
 
-ARTIFACT_DIR = Path(".aoc")
-TEMPLATE = Path(".github/codex/prompts/autonomous.md.template")
-OUTPUT = ARTIFACT_DIR / "prompt.md"
 
-
-def main() -> None:
+def render_prompt() -> int:
     dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
 
-    # Environment always wins — meta.json may be stale during multi-day replay.
     year = os.environ.get("AOC_YEAR", "2026")
     day = os.environ.get("AOC_DAY", "1")
     title = "Advent of Code"
@@ -67,7 +57,7 @@ def main() -> None:
             "## Finale day\n\n"
             f"Day {day} is the **event finale** — there is no real Part 2 puzzle. "
             "After Part 1 is accepted, skip `refresh` and `puzzle 2`. "
-            "Implement `part2.py` with a placeholder answer (e.g. `return \"0\"`), "
+            'Implement `part2.py` with a placeholder answer (e.g. `return "0"`), '
             "then `test 2` and `submit 2` to claim the final star.\n\n"
             "Do **not** modify toolkit source under `src/` — finale handling is built in."
         )
@@ -80,13 +70,13 @@ def main() -> None:
     else:
         finale_section = ""
         part2_workflow = (
-            "5. `refresh` → confirm `meta` shows `\"has_part2\": true` → `puzzle 2`.\n"
+            '5. `refresh` → confirm `meta` shows `"has_part2": true` → `puzzle 2`.\n'
             "6. Implement `part2.py` (keep part1 working).\n"
             "7. **Loop** until `test 2` passes.\n"
             f"8. {submit_p2}"
         )
 
-    template = TEMPLATE.read_text(encoding="utf-8")
+    template = PROMPT_TEMPLATE.read_text(encoding="utf-8")
     prompt = (
         template.replace("{{YEAR}}", year)
         .replace("{{DAY}}", day)
@@ -99,9 +89,6 @@ def main() -> None:
     )
 
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(prompt, encoding="utf-8")
-    print(f"Wrote {OUTPUT} ({len(prompt)} bytes)")
-
-
-if __name__ == "__main__":
-    main()
+    PROMPT_OUTPUT.write_text(prompt, encoding="utf-8")
+    print(f"Wrote {PROMPT_OUTPUT} ({len(prompt)} bytes)")
+    return 0

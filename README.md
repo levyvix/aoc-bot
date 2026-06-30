@@ -1,6 +1,6 @@
 # aoc-bot
 
-Automated [Advent of Code](https://adventofcode.com/) solver. A **Cursor agent** runs autonomously in GitHub Actions with shell tools to fetch puzzles, write code, test, submit, and retry until correct.
+Automated [Advent of Code](https://adventofcode.com/) solver. A **Cursor agent** runs autonomously in GitHub Actions, uses the `aoc` CLI to fetch puzzles, test, and submit, then CI verifies and commits solutions.
 
 ## How it works
 
@@ -8,17 +8,25 @@ Automated [Advent of Code](https://adventofcode.com/) solver. A **Cursor agent**
 sequenceDiagram
     participant CI as GitHub Actions
     participant Agent as Cursor agent
-    participant Tool as aoc_tool.py
+    participant CLI as aoc CLI
 
-    CI->>Agent: Autonomous prompt + CURSOR_API_KEY
-    Agent->>Tool: prepare / puzzle / test / submit / refresh
-    Tool->>Tool: Loop until both parts accepted
-    CI->>Tool: final_check (sanity gate)
+    CI->>CLI: solve-day / replay-year
+    CLI->>Agent: render-prompt → run-agent
+    Agent->>CLI: meta / puzzle / test / submit / refresh
+    CLI->>CLI: verify → push
 ```
 
-The agent owns the full loop — CI does not micromanage each step. A lightweight `final_check` runs after the agent to confirm solutions pass local tests.
+The agent owns the solve loop. CI runs `aoc verify` after the agent to confirm solutions pass local tests.
 
-### Agent toolkit (`scripts/aoc_tool.py`)
+## CLI
+
+Install with `uv sync`, then:
+
+```bash
+uv run aoc --help
+```
+
+### Agent toolkit (used by the Cursor agent)
 
 | Command | Purpose |
 |---------|---------|
@@ -29,7 +37,14 @@ The agent owns the full loop — CI does not micromanage each step. A lightweigh
 | `refresh` | Re-fetch page after Part 1 unlocks Part 2 |
 | `meta` | Show day/year/status |
 
-Part 2 text only appears after Part 1 is accepted — the agent must `submit 1` → `refresh` → `puzzle 2`.
+### CI workflows
+
+| Command | Purpose |
+|---------|---------|
+| `solve-day` | prepare → render-prompt → run-agent → verify → push |
+| `replay-year` | Run `solve-day` for a range of days sequentially |
+| `verify` | Post-agent sanity check |
+| `push` | Commit and push `solutions/YEAR/DAY/` |
 
 ## Setup
 
@@ -40,18 +55,21 @@ Part 2 text only appears after Part 1 is accepted — the agent must `submit 1` 
 | `AOC_SESSION` | AoC `session` cookie |
 | `CURSOR_API_KEY` | [Cursor Dashboard → API Keys](https://cursor.com/dashboard) |
 
-### Optional variables
+### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AOC_YEAR` | `2026` | Event year (December cron) |
-| `CURSOR_MODEL` | `composer-2.5` | Model for `agent` in CI |
+| `AOC_YEAR` | current year | Event year |
+| `AOC_DAY` | today (December) | Puzzle day |
+| `AOC_DRY_RUN` | — | Part 1 only, no submit |
+| `AOC_SKIP_COMMIT` | — | Skip `push` in `solve-day` / `replay-year` |
+| `CURSOR_MODEL` | `composer-2.5` | Model for `run-agent` |
 
 ### Workflows
 
-- **[solve.yml](.github/workflows/solve.yml)** — Dec 1–12 at 05:00 UTC + manual dispatch (live event)
+- **[solve.yml](.github/workflows/solve.yml)** — Dec 1–25 at 05:00 UTC + manual dispatch
 - **[test-replay.yml](.github/workflows/test-replay.yml)** — single-day replay test
-- **[replay-year.yml](.github/workflows/replay-year.yml)** — full year replay (e.g. all 25 days of 2021)
+- **[replay-year.yml](.github/workflows/replay-year.yml)** — full year replay
 
 ## Local usage
 
@@ -60,13 +78,12 @@ uv sync
 export AOC_SESSION="..."
 export AOC_YEAR=2025 AOC_DAY=1
 
-# Try the toolkit yourself
-uv run python scripts/aoc_tool.py prepare
-uv run python scripts/aoc_tool.py puzzle 1
+uv run aoc prepare
+uv run aoc puzzle 1
 
-# Run the autonomous agent locally
-uv run python scripts/render_prompt.py
-agent -p "$(cat .aoc/prompt.md)" --force --model composer-2.5
+# Full autonomous pipeline
+export CURSOR_API_KEY="..."
+uv run aoc solve-day --skip-commit
 ```
 
 ## Solution layout
@@ -79,9 +96,7 @@ solutions/
       part2.py
 ```
 
-See `solutions/_template/` for examples.
-
 ## Security
 
-- `AOC_SESSION` is only in CI env — agent must use `aoc_tool.py submit`, not curl.
-- `.cursor/cli.json` allows `uv`/`python`/`sleep`; denies `git`, `curl`, `.env` access.
+- `AOC_SESSION` is only in CI env — the agent must use `aoc submit`, not curl.
+- `.cursor/cli.json` allows `uv`/`aoc`/`sleep`; denies `git`, `curl`, `.env` access.

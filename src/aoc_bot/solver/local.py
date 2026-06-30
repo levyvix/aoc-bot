@@ -5,10 +5,10 @@ import sys
 from pathlib import Path
 
 from aoc_bot.solution_paths import part_file
-from aoc_bot.solver.base import SolveResult, Solver
+from aoc_bot.solver.base import SolveResult
 
 
-class LocalSolver(Solver):
+class LocalSolver:
     """Load solutions from solutions/{year}/{day}/part{N}.py."""
 
     def __init__(self, solutions_dir: Path | None = None) -> None:
@@ -53,4 +53,4 @@ class LocalSolver(Solver):
             raise AttributeError(f"{path} must define solve(data: str) -> str")
 
         answer = fn(puzzle_input)
-        return SolveResult(answer=str(answer).strip(), source="local")
+        return SolveResult(answer=str(answer).strip())

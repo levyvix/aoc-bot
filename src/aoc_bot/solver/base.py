@@ -1,20 +1,13 @@
 from __future__ import annotations
 
 import re
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
 @dataclass
 class SolveResult:
     answer: str
-    source: str  # "llm" | "local"
-
-
-class Solver(ABC):
-    @abstractmethod
-    def solve(self, *, day: int, part: int, puzzle_html: str, puzzle_input: str) -> SolveResult:
-        ...
+    source: str = "local"
 
 
 def strip_html(html: str) -> str:
