@@ -31,7 +31,11 @@ def main() -> None:
     solver = LocalSolver()
     puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
     answer = solver.solve(
-        day=day, part=part, puzzle_html="", puzzle_input=puzzle_input
+        year=settings.year,
+        day=day,
+        part=part,
+        puzzle_html="",
+        puzzle_input=puzzle_input,
     ).answer
     print(f"Submitting part {part} answer: {answer}")
 

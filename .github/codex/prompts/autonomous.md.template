@@ -9,12 +9,12 @@ All commands run from the repo root:
 
 ```bash
 uv run python scripts/aoc_tool.py prepare      # fetch input + puzzle text from AoC
-uv run python scripts/aoc_tool.py meta         # day, year, paths, has_part2 flag
+uv run python scripts/aoc_tool.py meta         # day, year, solution paths
 uv run python scripts/aoc_tool.py input-path   # path to your puzzle input file
 uv run python scripts/aoc_tool.py puzzle 1     # Part 1 description
 uv run python scripts/aoc_tool.py puzzle 2     # Part 2 (only after Part 1 accepted on AoC)
-uv run python scripts/aoc_tool.py test 1       # run solutions/day{{DAY_PADDED}}.py part1 locally
-uv run python scripts/aoc_tool.py test 2       # test part2
+uv run python scripts/aoc_tool.py test 1       # run solutions/{{YEAR}}/{{DAY}}/part1.py
+uv run python scripts/aoc_tool.py test 2       # run part2.py
 uv run python scripts/aoc_tool.py submit 1     # submit Part 1 to adventofcode.com
 uv run python scripts/aoc_tool.py submit 2     # submit Part 2
 uv run python scripts/aoc_tool.py refresh      # re-fetch page after Part 1 unlocks Part 2
@@ -22,15 +22,17 @@ uv run python scripts/aoc_tool.py refresh      # re-fetch page after Part 1 unlo
 
 {{DRY_RUN_SECTION}}
 
-## Solution file
+## Solution files
 
-Write `solutions/day{{DAY_PADDED}}.py`:
+Write one file per part under `solutions/{{YEAR}}/{{DAY}}/`:
+
+- `solutions/{{YEAR}}/{{DAY}}/part1.py`
+- `solutions/{{YEAR}}/{{DAY}}/part2.py`
+
+Each file must define:
 
 ```python
-def part1(data: str) -> str:
-    ...
-
-def part2(data: str) -> str:
+def solve(data: str) -> str:
     ...
 ```
 
@@ -38,14 +40,16 @@ def part2(data: str) -> str:
 - Read input from the `data` argument (never hardcode answers).
 - Do **not** read `AOC_SESSION` or any secrets — `submit` handles auth.
 
+Run `prepare` first — it creates the `solutions/{{YEAR}}/{{DAY}}/` directory.
+
 ## Required workflow
 
 1. `prepare` → read `meta` and `puzzle 1`.
-2. Implement Part 1 in the solution file.
+2. Implement `part1.py` in the solution directory.
 3. **Loop** until `test 1` passes.
 4. {{SUBMIT_PART1_SECTION}}
 5. `refresh` → confirm `meta` shows `"has_part2": true` → `puzzle 2`.
-6. Implement Part 2 (keep Part 1 working).
+6. Implement `part2.py` (keep part1 working).
 7. **Loop** until `test 2` passes.
 8. {{SUBMIT_PART2_SECTION}}
 9. Stop when done. Summarize both answers and submission results.

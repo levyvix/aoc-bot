@@ -20,18 +20,20 @@ def main() -> None:
     parts = [int(part_raw)] if part_raw else [1, 2]
 
     meta = json.loads((ARTIFACT_DIR / "meta.json").read_text(encoding="utf-8"))
+    year = int(meta["year"])
     day = int(meta["day"])
     puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
 
     solver = LocalSolver()
-    if not solver.has_solution(day):
-        print(f"ERROR: no solution file for day {day}", file=sys.stderr)
-        sys.exit(1)
-
     failed = False
     for part in parts:
+        if not solver.has_solution(year, day, part):
+            print(f"ERROR: missing {solver.part_path(year, day, part)}", file=sys.stderr)
+            failed = True
+            continue
         try:
             result = solver.solve(
+                year=year,
                 day=day,
                 part=part,
                 puzzle_html="",

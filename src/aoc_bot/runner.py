@@ -27,8 +27,8 @@ def pick_solver(settings: Settings, day: int) -> LocalSolver | LLMSolver:
             raise ValueError("OPENAI_API_KEY is required for LLM solver")
         return LLMSolver(api_key=settings.openai_api_key, model=settings.openai_model)
     # auto: prefer committed solution, fall back to LLM
-    if local.has_solution(day):
-        log.info("Using local solution for day %s", day)
+    if local.has_solution(settings.year, day):
+        log.info("Using local solution for year %s day %s", settings.year, day)
         return local
     if not settings.openai_api_key:
         raise ValueError(
@@ -42,14 +42,26 @@ def run_part(
     client: AoCClient,
     solver: LocalSolver | LLMSolver,
     *,
+    year: int,
     day: int,
     part: int,
     puzzle_html: str,
     puzzle_input: str,
     dry_run: bool,
 ) -> SubmitResult | None:
-    log.info("Solving day %s part %s...", day, part)
-    result = solver.solve(day=day, part=part, puzzle_html=puzzle_html, puzzle_input=puzzle_input)
+    log.info("Solving year %s day %s part %s...", year, day, part)
+    if isinstance(solver, LocalSolver):
+        result = solver.solve(
+            year=year,
+            day=day,
+            part=part,
+            puzzle_html=puzzle_html,
+            puzzle_input=puzzle_input,
+        )
+    else:
+        result = solver.solve(
+            day=day, part=part, puzzle_html=puzzle_html, puzzle_input=puzzle_input
+        )
     log.info("Answer (via %s): %s", result.source, result.answer)
 
     if dry_run:
@@ -108,6 +120,7 @@ def main() -> None:
             result = run_part(
                 client,
                 solver,
+                year=settings.year,
                 day=day,
                 part=part,
                 puzzle_html=puzzle_html,

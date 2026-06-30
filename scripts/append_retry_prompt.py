@@ -22,14 +22,14 @@ def main() -> None:
     base = args.base.read_text(encoding="utf-8")
     feedback = args.feedback.read_text(encoding="utf-8").strip()
     meta = json.loads((ARTIFACT_DIR / "meta.json").read_text(encoding="utf-8"))
-    day_padded = f"{int(meta['day']):02d}"
+    solution_dir = meta.get("solution_dir", f"solutions/{meta['year']}/{meta['day']}")
 
     retry = f"""
 ---
 
 ## Retry (attempt {args.attempt})
 
-Your previous solution did not work. Fix `solutions/day{day_padded}.py` and try again.
+Your previous solution did not work. Fix files under `{solution_dir}/` and try again.
 
 ### What went wrong
 

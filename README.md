@@ -68,17 +68,17 @@ uv run python scripts/render_prompt.py
 agent -p "$(cat .aoc/prompt.md)" --force --model composer-2.5
 ```
 
-## Solution format
+## Solution layout
 
-`solutions/day01.py`:
-
-```python
-def part1(data: str) -> str:
-    return str(...)
-
-def part2(data: str) -> str:
-    return str(...)
 ```
+solutions/
+  2025/
+    1/
+      part1.py   # def solve(data: str) -> str
+      part2.py
+```
+
+See `solutions/_template/` for examples.
 
 ## Security
 

@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from aoc_bot.client import AoCClient, SubmitResult
 from aoc_bot.config import SUBMIT_COOLDOWN_SECONDS, Settings, resolve_day, is_historical_replay
+from aoc_bot.solution_paths import ensure_solution_dir, part_file, solution_dir
 from aoc_bot.solver.base import strip_html
 from aoc_bot.solver.local import LocalSolver
 
@@ -74,13 +75,17 @@ def _write_artifacts(
     elif part2_path.exists():
         part2_path.unlink()
 
+    ensure_solution_dir(settings.year, day)
+
     meta = {
         "day": day,
         "year": settings.year,
         "title": title,
         "has_part2": part2_html is not None,
         "input_bytes": len(puzzle_input),
-        "solution_file": f"solutions/day{day:02d}.py",
+        "solution_dir": str(solution_dir(settings.year, day)),
+        "part1_file": str(part_file(settings.year, day, 1)),
+        "part2_file": str(part_file(settings.year, day, 2)),
     }
     (ARTIFACT_DIR / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
@@ -120,15 +125,21 @@ def cmd_puzzle(part: int) -> int:
 
 def cmd_test(part: int) -> int:
     meta = _load_meta()
+    year = int(meta["year"])
     day = int(meta["day"])
     puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
     solver = LocalSolver()
-    if not solver.has_solution(day):
-        print(f"ERROR: missing solutions/day{day:02d}.py", file=sys.stderr)
+    path = solver.part_path(year, day, part)
+    if not path.exists():
+        print(f"ERROR: missing {path}", file=sys.stderr)
         return 1
     try:
         result = solver.solve(
-            day=day, part=part, puzzle_html="", puzzle_input=puzzle_input
+            year=year,
+            day=day,
+            part=part,
+            puzzle_html="",
+            puzzle_input=puzzle_input,
         )
     except (NotImplementedError, AttributeError) as exc:
         print(f"ERROR: part{part} not implemented: {exc}", file=sys.stderr)
@@ -147,11 +158,15 @@ def cmd_submit(part: int) -> int:
 
     settings = _settings()
     day = resolve_day(settings)
-    meta = _load_meta()
+    year = settings.year
     puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
     solver = LocalSolver()
     answer = solver.solve(
-        day=day, part=part, puzzle_html="", puzzle_input=puzzle_input
+        year=year,
+        day=day,
+        part=part,
+        puzzle_html="",
+        puzzle_input=puzzle_input,
     ).answer
 
     with AoCClient(settings.session, settings.year) as client:

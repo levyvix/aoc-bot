@@ -69,13 +69,15 @@ jobs:
       - name: Post-agent check
         run: uv run python scripts/final_check.py
 
-      - name: Commit solution
+      - name: Commit solutions
         if: ${{ success() && github.event.inputs.skip_commit != true }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add solutions/ .aoc/meta.json
-          git diff --staged --quiet || git commit -m "aoc: day $(cat .aoc/day.txt 2>/dev/null || echo unknown) solution"
+          YEAR=$(jq -r .year .aoc/meta.json)
+          DAY=$(jq -r .day .aoc/meta.json)
+          git add "solutions/${YEAR}/${DAY}/"
+          git diff --staged --quiet || git commit -m "aoc: ${YEAR} day ${DAY} solutions"
           git push
 
       - name: Upload artifacts
