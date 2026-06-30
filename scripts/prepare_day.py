@@ -31,8 +31,17 @@ def main() -> None:
             print(f"Waiting for day {day} to unlock...")
             client.wait_for_day_unlock(day)
 
-        puzzle_input = client.get_input(day)
-        page = client.get_puzzle_page(day)
+        try:
+            puzzle_input = client.get_input(day)
+            page = client.get_puzzle_page(day)
+        except Exception:
+            ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+            try:
+                debug = client._client.get(f"/{settings.year}/day/{day}")
+                (ARTIFACT_DIR / "debug-day-page.html").write_text(debug.text, encoding="utf-8")
+            except Exception:
+                pass
+            raise
 
     (out / "day.txt").write_text(str(day), encoding="utf-8")
     (out / "year.txt").write_text(str(settings.year), encoding="utf-8")

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 import httpx
+from bs4 import BeautifulSoup
 
 from aoc_bot.config import AOC_BASE_URL, USER_AGENT, POLL_INTERVAL_SECONDS, MAX_UNLOCK_WAIT_SECONDS
 
@@ -67,17 +68,28 @@ class AoCClient:
     def get_puzzle_page(self, day: int) -> PuzzlePage:
         response = self._client.get(f"/{self.year}/day/{day}")
         response.raise_for_status()
-        html = response.text
+        soup = BeautifulSoup(response.text, "html.parser")
 
-        title_match = re.search(r"<title>.*?Day (\d+) - (.+?)\s*\|", html)
-        title = title_match.group(2) if title_match else f"Day {day}"
+        title = f"Day {day}"
+        title_tag = soup.find("title")
+        if title_tag:
+            title_match = re.search(r"Day \d+ - (.+?)\s*\|", title_tag.get_text())
+            if title_match:
+                title = title_match.group(1).strip()
 
-        articles = re.findall(r"<article[^>]*>(.*?)</article>", html, flags=re.DOTALL)
+        articles = soup.select("article.day-desc")
+        if not articles:
+            articles = soup.find_all("article")
+        if not articles:
+            main = soup.find("main")
+            if main is not None:
+                articles = [main]
+
         if not articles:
             raise ValueError(f"Could not parse puzzle description for day {day}")
 
-        part1_html = articles[0]
-        part2_html = articles[1] if len(articles) > 1 else None
+        part1_html = articles[0].decode_contents()
+        part2_html = articles[1].decode_contents() if len(articles) > 1 else None
         return PuzzlePage(title=title, part1_html=part1_html, part2_html=part2_html)
 
     def submit(self, day: int, part: int, answer: str) -> SubmitResult:
