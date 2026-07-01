@@ -22,16 +22,19 @@ def _aoc_incomplete_retry_note() -> str:
     return (
         "## Both parts must be submitted on adventofcode.com\n\n"
         "The last run ended before both stars were earned. "
-        "Use `uv run aoc test` and `uv run aoc submit` until part 1 and part 2 "
-        "each print `OK part N accepted`. Do not stop until both are accepted."
+        "Verify each part against the puzzle example, then use "
+        "`uv run aoc submit` until part 1 and part 2 "
+        "each print `OK part N accepted`. If stuck, search Reddit "
+        "(r/adventofcode) for tips. Do not stop until both are accepted."
     )
 
 
 def _verify_retry_note() -> str:
     return (
         "## Previous attempt failed verification\n\n"
-        "Local tests did not pass after the last agent run. "
-        "Fix the solution files until every required `test` passes, then submit."
+        "Required solution files were missing after the last agent run. "
+        "Re-check each puzzle example, write the solution files, submit, "
+        "and search Reddit (r/adventofcode) if you are stuck."
     )
 
 
@@ -149,7 +152,7 @@ def replay_year(
             return 1
 
         if day_already_solved():
-            print(f"SKIP: day {day} fully solved (local tests + AoC stars)")
+            print(f"SKIP: day {day} fully solved (AoC stars)")
             continue
 
         if toolkit.prepare() != 0:

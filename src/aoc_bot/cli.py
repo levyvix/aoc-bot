@@ -17,7 +17,6 @@ from aoc_bot import toolkit
 def _add_part_commands(sub: argparse._SubParsersAction) -> None:
     for name, handler in (
         ("puzzle", toolkit.puzzle),
-        ("test", toolkit.test),
         ("submit", toolkit.submit),
     ):
         parser = sub.add_parser(name, help=f"{name} for a puzzle part (1 or 2)")
@@ -37,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("input-path", help="Print path to puzzle input file")
     sub.add_parser("assert-day", help="Exit 1 if .aoc/meta.json does not match AOC_YEAR/AOC_DAY")
     sub.add_parser("render-prompt", help="Write the autonomous agent prompt to .aoc/prompt.md")
-    sub.add_parser("verify", help="Post-agent sanity check (assert-day + test)")
+    sub.add_parser("verify", help="Post-agent sanity check (assert-day + solution files)")
 
     check = sub.add_parser("check-day", help="Exit 0 if day is already solved")
     check.add_argument(
@@ -103,8 +102,6 @@ def main(argv: list[str] | None = None) -> int:
                 return toolkit.check_day(files_only=args.files_only)
             case "puzzle":
                 return toolkit.puzzle(args.part)
-            case "test":
-                return toolkit.test(args.part)
             case "submit":
                 return toolkit.submit(args.part)
             case "render-prompt":

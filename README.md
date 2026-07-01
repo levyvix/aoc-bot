@@ -1,6 +1,6 @@
 # aoc-bot
 
-Autonomous [Advent of Code](https://adventofcode.com/) solver. A **Cursor agent** runs in GitHub Actions, uses the `aoc` CLI to fetch puzzles, test, and submit, then CI verifies and commits solutions.
+Autonomous [Advent of Code](https://adventofcode.com/) solver. A **Cursor agent** runs in GitHub Actions, uses the `aoc` CLI to fetch puzzles and submit answers, then CI verifies and commits solutions.
 
 Requires **Python ≥ 3.12**. Install dependencies with [uv](https://docs.astral.sh/uv/).
 
@@ -14,11 +14,11 @@ sequenceDiagram
 
     CI->>CLI: solve-day / replay-year
     CLI->>Agent: render-prompt → run-agent (retries)
-    Agent->>CLI: meta / puzzle / test / submit / refresh
+    Agent->>CLI: meta / puzzle / submit / refresh
     CLI->>CLI: verify → AoC stars check → push
 ```
 
-The agent owns the solve loop. After each attempt, `aoc verify` runs local tests. Unless `AOC_DRY_RUN` is set, the pipeline also checks that adventofcode.com shows both parts complete, retrying up to `AOC_SOLVE_ATTEMPTS` times (default 3) before failing.
+The agent owns the solve loop. After each attempt, `aoc verify` checks that solution files exist. Unless `AOC_DRY_RUN` is set, the pipeline also checks that adventofcode.com shows both parts complete, retrying up to `AOC_SOLVE_ATTEMPTS` times (default 3) before failing.
 
 ## CLI
 
@@ -33,8 +33,7 @@ uv run aoc --help
 |---------|---------|
 | `prepare` | Fetch input + puzzle text from AoC |
 | `puzzle 1\|2` | Print puzzle description |
-| `test 1\|2` | Run solution against `.aoc/input.txt` |
-| `submit 1\|2` | Submit to adventofcode.com (uses `AOC_SESSION` env) |
+| `submit 1\|2` | Run solution on real input and submit to adventofcode.com |
 | `refresh` | Re-fetch page after Part 1 unlocks Part 2 |
 | `meta` | Show day/year/status from `.aoc/meta.json` |
 | `input-path` | Print path to `.aoc/input.txt` |
@@ -47,14 +46,14 @@ uv run aoc --help
 |---------|---------|
 | `render-prompt` | Write the agent prompt to `.aoc/prompt.md` |
 | `run-agent` | Run the Cursor agent against the prompt |
-| `verify` | Post-agent check (`assert-day` + `test`) |
+| `verify` | Post-agent check (`assert-day` + solution files exist) |
 | `push` | Commit and push `solutions/YEAR/DAY/` |
 | `solve-day` | Full pipeline (see below) |
 | `replay-year` | Run the solve pipeline for a day range sequentially |
 
 `solve-day` runs: **prepare → render-prompt → run-agent → verify → (AoC stars check) → push**, with retries when verify fails or stars are missing. Days past the event finale (day 12 for 2025+, day 25 before) exit successfully without work.
 
-`replay-year` skips days that are already fully solved (local tests + AoC stars), runs `git pull --rebase` before each day when committing, and caps the end day to the event finale.
+`replay-year` skips days that are already fully solved (AoC stars), runs `git pull --rebase` before each day when committing, and caps the end day to the event finale.
 
 ## Setup
 
@@ -80,7 +79,7 @@ Set under **Settings → Secrets and variables → Actions → Variables**:
 |----------|---------|-------------|
 | `AOC_YEAR` | current year | Event year |
 | `AOC_DAY` | today in US Eastern (December only) | Puzzle day |
-| `AOC_DRY_RUN` | — | Part 1 only: skip submit and only verify part 1 |
+| `AOC_DRY_RUN` | — | Part 1 only: skip submit; agent must pass the puzzle example |
 | `AOC_SKIP_COMMIT` | — | Skip `push` in `solve-day` / `replay-year` |
 | `AOC_SOLVE_ATTEMPTS` | `3` | Max agent retries per day |
 | `AOC_START_DAY` | `1` | First day for `replay-year` |

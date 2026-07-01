@@ -77,7 +77,7 @@ def puzzle(part: int) -> int:
             print(
                 "Finale day — there is no Part 2 puzzle. "
                 'Implement part2.py with a placeholder answer (e.g. return "0"), '
-                "then test 2 and submit 2 to claim the final star."
+                "then submit 2 to claim the final star."
             )
             return 0
         print(f"ERROR: {path} not found.", file=sys.stderr)
@@ -112,27 +112,6 @@ def part_test_result(
     if not result.answer:
         return False, f"part{part} returned empty answer"
     return True, result.answer
-
-
-def test(part: int) -> int:
-    year, day = active_year_day()
-    err = artifacts_mismatch(year, day)
-    if err:
-        print(f"ERROR: {err}", file=sys.stderr)
-        return 1
-    puzzle_input = (ARTIFACT_DIR / "input.txt").read_text(encoding="utf-8")
-    ok, detail = part_test_result(
-        year=year,
-        day=day,
-        part=part,
-        puzzle_input=puzzle_input,
-        solver=LocalSolver(),
-    )
-    if not ok:
-        print(f"ERROR: {detail}", file=sys.stderr)
-        return 1
-    print(f"OK part{part}={detail}")
-    return 0
 
 
 def assert_day() -> int:
@@ -319,9 +298,14 @@ def verify() -> int:
         return 1
     if assert_day() != 0:
         return 1
+
+    year, day = active_year_day()
+    solver = LocalSolver()
     for part in parts:
-        if test(part) != 0:
-            print("ERROR: post-agent verification failed", file=sys.stderr)
+        path = solver.part_path(year, day, part)
+        if not path.exists():
+            print(f"ERROR: missing solution file {path}", file=sys.stderr)
             return 1
+
     print("Post-agent check passed")
     return 0

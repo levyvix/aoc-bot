@@ -12,8 +12,6 @@ AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc meta
 AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc input-path
 AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc puzzle 1
 AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc puzzle 2
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc test 1
-AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc test 2
 AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc submit 1
 AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc submit 2
 AOC_YEAR={{YEAR}} AOC_DAY={{DAY}} uv run aoc refresh
@@ -39,19 +37,35 @@ def solve(data: str) -> str:
 - Standard library only.
 - Read input from the `data` argument (never hardcode answers).
 - Do **not** read `AOC_SESSION` or any secrets — `submit` handles auth.
+- Do **not** run your solution on the full `.aoc/input.txt` locally — it may be slow. `submit` runs it when you are ready.
 
-## Required workflow
+## Puzzle example (required before `submit`)
 
-1. `meta` → confirm `"day": {{DAY}}` and `"year": {{YEAR}}` → `puzzle 1`.
-2. Implement `part1.py` in `solutions/{{YEAR}}/{{DAY}}/`.
-3. **Loop** until `test 1` passes.
-4. {{SUBMIT_PART1_SECTION}}
+Every puzzle includes a worked **example**: sample input and the answer the description says it should produce.
+
+For each part, before calling `submit`:
+
+1. Read `puzzle N` and locate the example input and expected answer.
+2. Call `solve(example_input)` (load `partN.py` with `importlib` and print `solve('''…''')`).
+3. Confirm your output **exactly** matches the example answer (same string, no extra whitespace).
+4. If it does not match, fix the code and re-check. **Do not** call `submit N` until the example passes.
+
+## Solve loop (each part)
+
+1. Implement or fix `partN.py`.
+2. **Loop** until `solve(example_input)` matches the puzzle example.
+3. Call `submit N` for that part (only after the example passes).
+4. If `submit` returns **WRONG**: re-check the example, fix or optimize the code, confirm the example still passes, then `submit` again.
+5. If you are **stuck** (example will not pass, or repeated WRONG submits with no progress): search Reddit for help — e.g. `site:reddit.com/r/adventofcode "{{YEAR}} day {{DAY}}" part N` — for tips, edge cases, and solution approaches. Apply what you learn, re-verify the example, then `submit` again.
+
+{{PART1_WORKFLOW}}
 {{PART2_WORKFLOW}}
-9. Stop only when both `submit 1` and `submit 2` have succeeded. Summarize both answers and submission results.
+
+Finally, stop only when both required `submit` calls have succeeded (or dry-run Part 1 example verification is complete). Summarize results.
 
 ## Rules
 
+- **Never** call `submit` until the puzzle example for that part passes.
 - AoC rate-limits submissions to ~1/minute — if submit says rate limited, wait and retry.
-- If submit returns WRONG, read the feedback, fix the code, `test` again, then `submit` again.
 - Part 2 text is **not** available until Part 1 is accepted on adventofcode.com (except finale days).
-- Test locally before every submit.
+- Prefer optimizing a slow algorithm over running the full input locally.
