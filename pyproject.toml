@@ -1,7 +1,7 @@
 [project]
 name = "aoc-bot"
 version = "0.1.0"
-description = "Automated Advent of Code solver with GitHub Actions"
+description = "Autonomous Advent of Code solver — Cursor agent in GitHub Actions"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

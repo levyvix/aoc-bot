@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from aoc_bot.agent import run_agent
+from aoc_bot.config import max_event_day
 from aoc_bot.artifacts import skip_commit_enabled
 from aoc_bot.git_push import push_solutions
 from aoc_bot.prompt import render_prompt
@@ -132,7 +133,9 @@ def main(argv: list[str] | None = None) -> int:
             case "replay-year":
                 year = args.year or int(os.environ["AOC_YEAR"])
                 start = args.start or int(os.environ.get("AOC_START_DAY", "1"))
-                end = args.end or int(os.environ.get("AOC_END_DAY", "25"))
+                end = args.end or int(
+                    os.environ.get("AOC_END_DAY", str(max_event_day(year)))
+                )
                 skip = args.skip_commit or skip_commit_enabled()
                 return replay_year(
                     year=year,

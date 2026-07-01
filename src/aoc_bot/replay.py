@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from aoc_bot.agent import run_agent
 from aoc_bot.artifacts import ARTIFACT_DIR, load_meta, skip_commit_enabled
+from aoc_bot.config import Settings, max_event_day, resolve_day
 from aoc_bot.git_push import pull_rebase, push_solutions
 from aoc_bot.prompt import render_prompt
 from aoc_bot import toolkit
@@ -79,7 +81,24 @@ def run_solve_attempts(*, year: int, day: int, output: Path) -> int:
     return 1
 
 
+def _skip_past_event_end(year: int, day: int) -> bool:
+    last_day = max_event_day(year)
+    if day <= last_day:
+        return False
+    print(
+        f"SKIP: no puzzle for {year} day {day} "
+        f"(event ends on day {last_day})",
+        flush=True,
+    )
+    return True
+
+
 def solve_day(*, skip_commit: bool | None = None) -> int:
+    settings = Settings.from_env()
+    day = resolve_day(settings)
+    if _skip_past_event_end(settings.year, day):
+        return 0
+
     if toolkit.prepare() != 0:
         return 1
     if toolkit.assert_day() != 0:
@@ -108,10 +127,18 @@ def replay_year(
     should_skip = skip_commit if skip_commit is not None else skip_commit_enabled()
     dry_run = os.environ.get("AOC_DRY_RUN", "").lower() in {"1", "true", "yes"}
 
-    print(f"==> Replaying AoC {year} days {start_day}–{end_day} (dry_run={dry_run})", flush=True)
+    last_day = min(end_day, max_event_day(year))
+    if end_day > last_day:
+        print(
+            f"NOTE: capping replay end at day {last_day} for {year} "
+            f"(requested end day {end_day})",
+            flush=True,
+        )
+
+    print(f"==> Replaying AoC {year} days {start_day}–{last_day} (dry_run={dry_run})", flush=True)
     os.environ["AOC_YEAR"] = str(year)
 
-    for day in range(start_day, end_day + 1):
+    for day in range(start_day, last_day + 1):
         print()
         print("############################################")
         print(f"# {year} Day {day}")
@@ -137,5 +164,5 @@ def replay_year(
         if not should_skip and push_solutions(year, day) != 0:
             return 1
 
-    print(f"==> Finished {year} days {start_day}–{end_day}")
+    print(f"==> Finished {year} days {start_day}–{last_day}")
     return 0

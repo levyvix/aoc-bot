@@ -52,11 +52,16 @@ def current_aoc_day(year: int | None = None) -> int | None:
     return now.day
 
 
+def max_event_day(year: int) -> int:
+    """Last puzzle day for an event year (12 from 2025 onward, 25 before)."""
+    if year >= 2025:
+        return 12
+    return 25
+
+
 def is_finale_day(year: int, day: int) -> bool:
     """True on the last puzzle day of an event (finale star, no real Part 2 puzzle)."""
-    if year >= 2025:
-        return day == 12
-    return day == 25
+    return day == max_event_day(year)
 
 
 def is_historical_replay(year: int, day: int) -> bool:

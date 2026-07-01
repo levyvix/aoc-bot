@@ -1,5 +1,6 @@
 name: AoC Daily Solve
 
+# Runs at 05:00 UTC (midnight US Eastern). Days past the event finale (12 for 2025+, 25 before) exit cleanly.
 on:
   schedule:
     - cron: "0 5 1-25 12 *"
