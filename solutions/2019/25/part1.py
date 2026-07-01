@@ -1,270 +1,290 @@
-from collections import deque
-import copy
-import itertools
+from __future__ import annotations
+
 import re
+from collections import deque
+from itertools import combinations
 
-
-def parse_program(data: str) -> list[int]:
-    return [int(x) for x in data.strip().split(",")]
+OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east"}
+DIRECTIONS = ("north", "south", "east", "west")
+DANGEROUS = frozenset(
+    {
+        "photons",
+        "escape pod",
+        "molten lava",
+        "infinite loop",
+        "infinite loop detector",
+        "giant electromagnet",
+    }
+)
 
 
 class Intcode:
     def __init__(self, program: list[int]) -> None:
-        self.memory = dict(enumerate(program))
+        self.mem = {i: v for i, v in enumerate(program)}
         self.ip = 0
-        self.relative_base = 0
+        self.rel = 0
         self.halted = False
-        self.input_value: int | None = None
-        self.output_value = 0
+        self._input: deque[int] = deque()
+        self._output: deque[int] = deque()
 
-    def copy(self) -> "Intcode":
-        return copy.deepcopy(self)
+    def queue_input(self, values: list[int]) -> None:
+        self._input.extend(values)
 
-    def _read(self, addr: int) -> int:
-        return self.memory.get(addr, 0)
+    def send(self, text: str) -> None:
+        self.queue_input([ord(c) for c in text + "\n"])
 
-    def _write(self, addr: int, value: int) -> None:
-        self.memory[addr] = value
+    def read_output(self) -> str:
+        chars: list[str] = []
+        while self._output:
+            value = self._output.popleft()
+            if value == 10:
+                break
+            chars.append(chr(value))
+        return "".join(chars)
 
-    def _mode(self, instruction: int, n: int) -> int:
-        return (instruction // (10 ** (n + 1))) % 10
+    def read_all_output(self) -> str:
+        parts: list[str] = []
+        while True:
+            line = self.read_output()
+            if not line and not self._output:
+                break
+            if line:
+                parts.append(line)
+        return "\n".join(parts)
 
-    def _param(self, n: int) -> int:
-        instruction = self._read(self.ip)
-        mode = self._mode(instruction, n)
-        addr = self.ip + n
+    def _get(self, addr: int) -> int:
+        return self.mem.get(addr, 0)
+
+    def _set(self, addr: int, value: int) -> None:
+        self.mem[addr] = value
+
+    def _mode(self, mode: int, offset: int) -> int:
         if mode == 0:
-            return self._read(self._read(addr))
+            return self._get(self.ip + offset)
         if mode == 1:
-            return self._read(addr)
-        return self._read(self.relative_base + self._read(addr))
+            return self.ip + offset
+        if mode == 2:
+            return self.rel + self._get(self.ip + offset)
+        raise ValueError(f"bad parameter mode {mode}")
 
-    def _param_addr(self, n: int) -> int:
-        instruction = self._read(self.ip)
-        mode = self._mode(instruction, n)
-        addr = self.ip + n
-        if mode == 0:
-            return self._read(addr)
-        if mode == 1:
-            raise ValueError("immediate mode not valid for write")
-        return self.relative_base + self._read(addr)
+    def _decode(self) -> tuple[int, list[int], list[int]]:
+        raw = self._get(self.ip)
+        opcode = raw % 100
+        modes = [(raw // 100) % 10, (raw // 1000) % 10, (raw // 10000) % 10]
+        if opcode in (1, 2, 7, 8):
+            params = [self._mode(modes[i], i + 1) for i in range(2)]
+            dest = self._mode(modes[2], 3)
+            return opcode, params, [dest]
+        if opcode in (3, 4):
+            params = [self._mode(modes[0], 1)]
+            return opcode, params, []
+        if opcode in (5, 6):
+            params = [self._mode(modes[i], i + 1) for i in range(2)]
+            return opcode, params, []
+        if opcode == 9:
+            params = [self._mode(modes[0], 1)]
+            return opcode, params, []
+        if opcode == 99:
+            return opcode, [], []
+        raise ValueError(f"unknown opcode {opcode} at {self.ip}")
 
-    def step_until_io(self) -> str:
+    def run_until_input_or_halt(self) -> None:
         while not self.halted:
-            instruction = self._read(self.ip) % 100
-            if instruction == 99:
+            opcode, params, dests = self._decode()
+            if opcode == 99:
                 self.halted = True
-                return "halt"
-            if instruction == 3:
-                if self.input_value is None:
-                    return "input"
-                self._write(self._param_addr(1), self.input_value)
-                self.input_value = None
+                return
+            if opcode == 1:
+                self._set(dests[0], self._get(params[0]) + self._get(params[1]))
+                self.ip += 4
+            elif opcode == 2:
+                self._set(dests[0], self._get(params[0]) * self._get(params[1]))
+                self.ip += 4
+            elif opcode == 3:
+                if not self._input:
+                    return
+                self._set(params[0], self._input.popleft())
                 self.ip += 2
-            elif instruction == 4:
-                self.output_value = self._param(1)
+            elif opcode == 4:
+                self._output.append(self._get(params[0]))
                 self.ip += 2
-                return "output"
-            elif instruction == 1:
-                self._write(self._param_addr(3), self._param(1) + self._param(2))
+            elif opcode == 5:
+                self.ip = self._get(params[1]) if self._get(params[0]) else self.ip + 3
+            elif opcode == 6:
+                self.ip = self._get(params[1]) if not self._get(params[0]) else self.ip + 3
+            elif opcode == 7:
+                self._set(dests[0], int(self._get(params[0]) < self._get(params[1])))
                 self.ip += 4
-            elif instruction == 2:
-                self._write(self._param_addr(3), self._param(1) * self._param(2))
+            elif opcode == 8:
+                self._set(dests[0], int(self._get(params[0]) == self._get(params[1])))
                 self.ip += 4
-            elif instruction == 5:
-                self.ip = self._param(2) if self._param(1) != 0 else self.ip + 3
-            elif instruction == 6:
-                self.ip = self._param(2) if self._param(1) == 0 else self.ip + 3
-            elif instruction == 7:
-                self._write(
-                    self._param_addr(3),
-                    1 if self._param(1) < self._param(2) else 0,
-                )
-                self.ip += 4
-            elif instruction == 8:
-                self._write(
-                    self._param_addr(3),
-                    1 if self._param(1) == self._param(2) else 0,
-                )
-                self.ip += 4
-            elif instruction == 9:
-                self.relative_base += self._param(1)
+            elif opcode == 9:
+                self.rel += self._get(params[0])
                 self.ip += 2
-            else:
-                raise ValueError(f"unknown opcode {instruction}")
-        return "halt"
-
-    def provide_input(self, value: int) -> None:
-        self.input_value = value
 
 
-DIRS = ["north", "south", "east", "west"]
-OPPOSITE = {"north": "south", "south": "north", "east": "west", "west": "east"}
-DANGEROUS = {
-    "infinite loop",
-    "photons",
-    "giant electromagnet",
-    "escape pod",
-    "molten lava",
-}
-
-
-def run_commands(vm: Intcode, commands: list[str]) -> str:
-    output: list[str] = []
-    for cmd in commands:
-        for ch in cmd + "\n":
-            while True:
-                status = vm.step_until_io()
-                if status == "output":
-                    output.append(chr(vm.output_value))
-                elif status == "input":
-                    vm.provide_input(ord(ch))
-                    break
-                elif status == "halt":
-                    return "".join(output)
-    while True:
-        status = vm.step_until_io()
-        if status == "output":
-            output.append(chr(vm.output_value))
-        elif status in ("input", "halt"):
-            break
-    return "".join(output)
-
-
-def parse_room(text: str) -> tuple[str, list[str], list[str]] | None:
-    lines = [line.strip() for line in text.strip().split("\n") if line.strip()]
-    if not lines or not lines[0].startswith("=="):
-        return None
-    name = lines[0].strip("=").strip()
-    doors: list[str] = []
+def _parse_room(text: str) -> tuple[str, set[str], list[str]]:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    name = ""
+    doors: set[str] = set()
     items: list[str] = []
-    section: str | None = None
-    for line in lines[1:]:
-        if line.startswith("Doors here lead:"):
+    section = ""
+
+    for line in lines:
+        if line.startswith("== ") and line.endswith(" =="):
+            name = line[3:-3]
+            continue
+        if line == "Doors here lead:":
             section = "doors"
             continue
-        if line.startswith("Items here:"):
+        if line == "Items here:":
             section = "items"
             continue
-        if line.startswith("Command?"):
-            break
-        if section == "doors" and line.startswith("- "):
-            doors.append(line[2:])
-        if section == "items" and line.startswith("- "):
-            items.append(line[2:])
+        if line.startswith("- "):
+            value = line[2:]
+            if section == "doors" and value in DIRECTIONS:
+                doors.add(value)
+            elif section == "items":
+                items.append(value)
+
     return name, doors, items
 
 
-def explore(program: list[int]) -> tuple[dict[str, dict], dict[str, dict[str, str]]]:
-    vm = Intcode(program)
-    start_out = run_commands(vm, [])
-    parsed = parse_room(start_out)
-    if parsed is None:
-        raise RuntimeError("failed to parse starting room")
-    name, doors, items = parsed
-    room_info: dict[str, dict] = {name: {"doors": set(doors), "items": list(items)}}
-    graph: dict[str, dict[str, str]] = {}
-    queue: deque[tuple[Intcode, str]] = deque([(vm.copy(), name)])
-    visited_edges: set[tuple[str, str]] = set()
-
-    while queue:
-        vm_state, room = queue.popleft()
-        for direction in room_info[room]["doors"]:
-            edge = (room, direction)
-            if edge in visited_edges:
-                continue
-            visited_edges.add(edge)
-            test_vm = vm_state.copy()
-            out = run_commands(test_vm, [direction])
-            parsed_move = parse_room(out)
-            if parsed_move is None or "Alert" in out:
-                continue
-            next_name, next_doors, next_items = parsed_move
-            graph.setdefault(room, {})[direction] = next_name
-            if next_name not in room_info:
-                room_info[next_name] = {
-                    "doors": set(next_doors),
-                    "items": list(next_items),
-                }
-            else:
-                room_info[next_name]["doors"].update(next_doors)
-            queue.append((test_vm, next_name))
-
-    return room_info, graph
+def _collect_output(computer: Intcode) -> str:
+    computer.run_until_input_or_halt()
+    chunks: list[str] = []
+    while computer._output:
+        value = computer._output.popleft()
+        chunks.append(chr(value))
+    return "".join(chunks)
 
 
-def bfs_path(
-    graph: dict[str, dict[str, str]], start: str, end: str
-) -> list[str] | None:
+def _command(computer: Intcode, cmd: str) -> str:
+    computer.send(cmd)
+    return _collect_output(computer)
+
+
+def _move(computer: Intcode, direction: str) -> str:
+    return _command(computer, direction)
+
+
+def _take(computer: Intcode, item: str) -> None:
+    _command(computer, f"take {item}")
+
+
+def _drop(computer: Intcode, item: str) -> None:
+    _command(computer, f"drop {item}")
+
+
+def _explore(
+    computer: Intcode,
+    output: str,
+    visited: set[str],
+    doors: dict[str, set[str]],
+    graph: dict[str, dict[str, str]],
+    inventory: list[str],
+) -> None:
+    name, room_doors, room_items = _parse_room(output)
+    if not name:
+        return
+    visited.add(name)
+    doors[name] = room_doors
+
+    for item in room_items:
+        if item in DANGEROUS:
+            continue
+        if item not in inventory:
+            _take(computer, item)
+            inventory.append(item)
+
+    for direction in room_doors:
+        out = _move(computer, direction)
+        next_name, _, _ = _parse_room(out)
+        if not next_name or "You can't go that way" in out:
+            _move(computer, OPPOSITE[direction])
+            continue
+        graph.setdefault(name, {})[direction] = next_name
+        graph.setdefault(next_name, {})[OPPOSITE[direction]] = name
+        if next_name not in visited:
+            _explore(computer, out, visited, doors, graph, inventory)
+        _move(computer, OPPOSITE[direction])
+
+
+def _find_security(rooms: set[str]) -> str | None:
+    for name in rooms:
+        if "Security" in name:
+            return name
+    return None
+
+
+def _path_to_room(start: str, goal: str, graph: dict[str, dict[str, str]]) -> list[str]:
+    if start == goal:
+        return []
     queue: deque[tuple[str, list[str]]] = deque([(start, [])])
     seen = {start}
     while queue:
         room, path = queue.popleft()
-        if room == end:
-            return path
-        for direction, nxt in graph.get(room, {}).items():
-            if nxt not in seen:
-                seen.add(nxt)
-                queue.append((nxt, path + [direction]))
-    return None
-
-
-def find_password(program: list[int]) -> str:
-    room_info, graph = explore(program)
-    checkpoint = "Security Checkpoint"
-    if checkpoint not in room_info:
-        raise RuntimeError("security checkpoint not found")
-
-    vm = Intcode(program)
-    run_commands(vm, [])
-
-    inventory: list[str] = []
-    for room_name, info in room_info.items():
-        for item in info["items"]:
-            if item in DANGEROUS:
+        for direction, nroom in graph.get(room, {}).items():
+            if nroom in seen:
                 continue
-            path = bfs_path(graph, "Hull Breach", room_name)
-            if path is None:
-                continue
-            run_commands(vm, path)
-            run_commands(vm, [f"take {item}"])
-            inventory.append(item)
-            run_commands(vm, [OPPOSITE[d] for d in reversed(path)])
+            npath = path + [direction]
+            if nroom == goal:
+                return npath
+            seen.add(nroom)
+            queue.append((nroom, npath))
+    return []
 
-    path = bfs_path(graph, "Hull Breach", checkpoint)
-    if path is None:
-        raise RuntimeError("no path to security checkpoint")
 
-    vm_at_checkpoint = vm.copy()
-    run_commands(vm_at_checkpoint, path)
+def _path_to(computer: Intcode, path: list[str]) -> None:
+    for direction in path:
+        _move(computer, direction)
 
-    sensor_dir = None
-    for direction in DIRS:
-        out = run_commands(vm_at_checkpoint.copy(), [direction])
-        if "heavier" in out or "lighter" in out or "Pressure" in out:
-            sensor_dir = direction
-            break
-    if sensor_dir is None:
-        raise RuntimeError("pressure-sensitive floor not found")
 
+def _crack_weight(computer: Intcode, inventory: list[str]) -> str:
+    held = set(inventory)
     for size in range(len(inventory) + 1):
-        for combo in itertools.combinations(inventory, size):
-            test_vm = vm.copy()
+        for combo in combinations(range(len(inventory)), size):
+            target = {inventory[i] for i in combo}
             for item in inventory:
-                run_commands(test_vm, [f"drop {item}"])
-            for item in combo:
-                run_commands(test_vm, [f"take {item}"])
-            run_commands(test_vm, path)
-            out = run_commands(test_vm, [sensor_dir])
-            if "heavier" in out or "lighter" in out:
-                continue
-            match = re.search(r"\b(\d+)\b", out)
-            if match:
-                return match.group(1)
+                if item in held and item not in target:
+                    _drop(computer, item)
+                    held.discard(item)
+                elif item not in held and item in target:
+                    _take(computer, item)
+                    held.add(item)
 
-    raise RuntimeError("password not found")
+            out = _move(computer, "west")
+            if computer.halted:
+                match = re.search(r"\b(\d{5,})\b", out)
+                if match:
+                    return match.group(1)
+                match = re.search(r"\b(\d+)\b", out)
+                if match:
+                    return match.group(1)
+                raise RuntimeError(f"passed sensor but no password in output: {out!r}")
+
+            _move(computer, "east")
+
+    raise RuntimeError("could not find correct item combination")
 
 
 def solve(data: str) -> str:
-    program = parse_program(data)
-    return find_password(program)
+    program = [int(x) for x in data.strip().split(",")]
+    computer = Intcode(program)
+
+    visited: set[str] = set()
+    doors: dict[str, set[str]] = {}
+    graph: dict[str, dict[str, str]] = {}
+    inventory: list[str] = []
+
+    initial = _collect_output(computer)
+    _explore(computer, initial, visited, doors, graph, inventory)
+
+    security = _find_security(visited)
+    if security is None:
+        raise RuntimeError(f"security room not found; rooms={sorted(visited)}")
+
+    start = "Hull Breach"
+    _path_to(computer, _path_to_room(start, security, graph))
+
+    return _crack_weight(computer, inventory)
